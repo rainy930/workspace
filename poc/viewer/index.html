@@ -457,48 +457,178 @@ function canvasTexOnce(size, draw) {
   return t;
 }
 
-/* 실사 대시 뷰: 실제 차량 사진(CC BY 2.0, Steve Jurvetson)을 배경으로 3D 상품 오버레이 */
+/* ---------- 실사 뷰: 실제 차량 사진 배경 + 슬롯 캘리브레이션 ----------
+   각 사진 뷰는 사진(또는 사진의 크롭)과 '슬롯' 목록을 가진다.
+   슬롯은 사진 픽셀 좌표(u,v: 0~1, v는 아래로)와 깊이·크기·회전으로,
+   상품의 bbox 중심을 해당 사진 위치에 정확히 붙인다 (화면 비율 무관). */
 let photoMode = false;
-const photoTex = new THREE.TextureLoader().load('assets/photo_dash_m3.jpg', (t) => { t.colorSpace = THREE.SRGBColorSpace; });
+let curPhoto = null;
+const texLoader = new THREE.TextureLoader();
+const photoTexCache = {};
+function getPhotoTex(url) {
+  if (!photoTexCache[url]) {
+    photoTexCache[url] = texLoader.load(url, (t) => { t.colorSpace = THREE.SRGBColorSpace; });
+  }
+  return photoTexCache[url];
+}
 const photoPlane = new THREE.Mesh(
   new THREE.PlaneGeometry(1, 1),
-  new THREE.MeshBasicMaterial({ map: photoTex, depthTest: false, depthWrite: false, toneMapped: false })
+  new THREE.MeshBasicMaterial({ depthTest: false, depthWrite: false, toneMapped: false })
 );
 photoPlane.renderOrder = -10;
 photoPlane.visible = false;
 camera.add(photoPlane);
 scene.add(camera);
-const PHOTO_ASPECT = 960 / 663;
+
+/* 사진 자료: "The Model 3 Interior" © Steve Jurvetson, CC BY 2.0 (Wikimedia Commons) */
+const PHOTO_VIEWS = [
+  {
+    id: 'photo_dash', label: '실사 대시', img: 'assets/photo_dash_m3.jpg', iw: 960, ih: 663,
+    crop: null, fov: 62,
+    slots: {
+      dashTrim:  { u: 0.30,  v: 0.262, d: 1.1, s: 0.50, rot: [0.03, -0.3, -0.1] },
+      screenFilm:{ u: 0.545, v: 0.33,  d: 1.0, s: 0.175, rot: [0.02, -0.5, 0.02] },
+      phoneMount:{ u: 0.40,  v: 0.265, d: 1.05, s: 0.08, rot: [0, -0.35, 0] },
+      cupTray:   { u: 0.555, v: 0.675, d: 0.8, s: 0.105, rot: [-0.68, -0.3, -0.08] },
+      organizer: { u: 0.638, v: 0.628, d: 0.8, s: 0.12, rot: [-0.68, -0.3, -0.08] },
+    },
+  },
+  {
+    id: 'photo_console', label: '실사 콘솔', img: 'assets/photo_dash_m3.jpg', iw: 960, ih: 663,
+    crop: { u0: 0.33, v0: 0.30, u1: 1.0, v1: 1.0 }, fov: 58,
+    slots: {
+      cupTray:   { u: 0.555, v: 0.675, d: 0.8, s: 0.105, rot: [-0.68, -0.3, -0.08] },
+      organizer: { u: 0.638, v: 0.628, d: 0.8, s: 0.12, rot: [-0.68, -0.3, -0.08] },
+      screenFilm:{ u: 0.545, v: 0.33,  d: 1.0, s: 0.175, rot: [0.02, -0.5, 0.02] },
+    },
+  },
+];
+const photoById = Object.fromEntries(PHOTO_VIEWS.map((p) => [p.id, p]));
+
+function photoAspect(ph) {
+  const base = ph.iw / ph.ih;
+  if (!ph.crop) return base;
+  const { u0, v0, u1, v1 } = ph.crop;
+  return base * (u1 - u0) / (v1 - v0);
+}
+/* cover 배치에서 사진 u,v ↔ 화면 NDC ↔ 카메라 공간 — 렌더 투영식과 동일 대수로 정확 보장 */
+function photoCover() {
+  const pa = photoAspect(curPhoto), sa = camera.aspect;
+  let nw, nh; // 사진이 차지하는 NDC 크기 (화면 = 2×2)
+  if (pa > sa) { nh = 2; nw = 2 * pa / sa; } else { nw = 2; nh = 2 * sa / pa; }
+  return { nw, nh };
+}
 function fitPhotoPlane() {
+  if (!curPhoto) return;
+  const { nw, nh } = photoCover();
   const d = 5;
-  const h = 2 * d * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2);
-  const w = h * camera.aspect;
-  let pw = w, ph = w / PHOTO_ASPECT;
-  if (ph < h) { ph = h; pw = h * PHOTO_ASPECT; }
-  photoPlane.scale.set(pw, ph, 1);
+  const t = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2);
+  photoPlane.scale.set(nw * t * camera.aspect * d, nh * t * d, 1);
   photoPlane.position.set(0, 0, -d);
 }
-const PHOTO_CAM = { pos: [-0.9, 1.32, 0.5], tgt: [0.32, 0.3, -0.1], fov: 74 };
-const PHOTO_SHOW = ['dash', 'console'];
-function enterPhotoMode() {
+function photoUVtoCam(u, v, depth) {
+  const { nw, nh } = photoCover();
+  const c = curPhoto.crop || { u0: 0, v0: 0, u1: 1, v1: 1 };
+  const lu = (u - c.u0) / (c.u1 - c.u0);
+  const lv = (v - c.v0) / (c.v1 - c.v0);
+  const nx = (lu - 0.5) * nw, ny = (0.5 - lv) * nh;
+  const t = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2);
+  return new THREE.Vector3(nx * t * camera.aspect * depth, ny * t * depth, -depth);
+}
+function photoWidthWorld(sFrac, depth) {
+  const { nw } = photoCover();
+  const t = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2);
+  return sFrac * nw * t * camera.aspect * depth;
+}
+const _pb = new THREE.Box3();
+function applyPhotoSlots() {
+  if (!curPhoto) return;
+  for (const [id, e] of installed) {
+    const p = byId[id];
+    const slot = p.mode === 'int' ? curPhoto.slots[id] : null;
+    if (!slot) {
+      if (e.orig) { // 복원 후 숨김
+        e.root.position.copy(e.orig.pos); e.root.quaternion.copy(e.orig.quat); e.root.scale.copy(e.orig.scale);
+      }
+      e.root.visible = false;
+      continue;
+    }
+    if (!e.orig) e.orig = { pos: e.root.position.clone(), quat: e.root.quaternion.clone(), scale: e.root.scale.clone() };
+    // 로컬 bbox (변환 제거 상태)
+    e.root.position.set(0, 0, 0); e.root.quaternion.identity(); e.root.scale.set(1, 1, 1);
+    e.root.updateMatrixWorld(true);
+    _pb.setFromObject(e.root);
+    const c0 = _pb.getCenter(new THREE.Vector3());
+    const size = _pb.getSize(new THREE.Vector3());
+    const w0 = Math.max(size.x, size.z, 0.01);
+    // 목표: 사진 u,v 위치·크기
+    const pCam = photoUVtoCam(slot.u, slot.v, slot.d);
+    const wWorld = photoWidthWorld(slot.s, slot.d);
+    const k = wWorld / w0;
+    const R = new THREE.Quaternion().setFromEuler(new THREE.Euler(...slot.rot));
+    const pWorld = camera.localToWorld(pCam.clone());
+    const Rw = camera.quaternion.clone().multiply(R);
+    e.root.quaternion.copy(Rw);
+    e.root.scale.setScalar(k);
+    e.root.position.copy(pWorld).sub(c0.clone().multiplyScalar(k).applyQuaternion(Rw));
+    e.root.visible = true;
+  }
+}
+function restorePhotoTransforms() {
+  for (const [, e] of installed) {
+    if (e.orig) {
+      e.root.position.copy(e.orig.pos); e.root.quaternion.copy(e.orig.quat); e.root.scale.copy(e.orig.scale);
+      e.orig = null;
+    }
+  }
+}
+const PHOTO_CAM_POS = [0, 1.2, 2.5];
+function enterPhotoMode(ph) {
   photoMode = true;
+  curPhoto = ph;
+  const tex = getPhotoTex(ph.img).clone();
+  if (ph.crop) {
+    tex.repeat.set(ph.crop.u1 - ph.crop.u0, ph.crop.v1 - ph.crop.v0);
+    tex.offset.set(ph.crop.u0, 1 - ph.crop.v1);
+  }
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.needsUpdate = true;
+  photoPlane.material.map = tex;
+  photoPlane.material.needsUpdate = true;
   photoPlane.visible = true;
   scene.background = null;
   exteriorGroup.visible = false;
   interiorGroup.visible = false;
   cabinExtrasGroup.visible = false;
   floorRefl.visible = false; floorMatte.visible = false; shadowFloor.visible = false; cyc.visible = false;
-  for (const [id, e] of installed) {
-    const p = byId[id];
-    e.root.visible = p.mode === 'int' && PHOTO_SHOW.includes(p.intView);
-  }
-  fitPhotoPlane();
+  flyAnim = null;
+  camera.position.set(...PHOTO_CAM_POS);
+  orbit.target.set(PHOTO_CAM_POS[0], PHOTO_CAM_POS[1], PHOTO_CAM_POS[2] - 1);
+  camera.lookAt(orbit.target); // 직전 뷰의 회전 제거 후 슬롯 적용
+  curBaseFov = ph.fov;
+  camera.fov = fitFov(curBaseFov);
+  camera.updateProjectionMatrix();
+  hemi.intensity = 1.5; sun.intensity = 0.9; scene.environmentIntensity = 1.0; // 사진 톤에 맞춤
+  // 렌더 시점과 동일한 카메라 상태에서 슬롯 적용 (상태 불일치 방지)
+  requestAnimationFrame(() => {
+    if (!photoMode) return;
+    camera.lookAt(orbit.target);
+    camera.updateProjectionMatrix();
+    camera.updateMatrixWorld(true);
+    fitPhotoPlane();
+    applyPhotoSlots();
+  });
 }
 function exitPhotoMode() {
   if (!photoMode) return;
   photoMode = false;
+  curPhoto = null;
   photoPlane.visible = false;
+  restorePhotoTransforms();
   floorMatte.visible = true; shadowFloor.visible = true;
+  for (const [id, e] of installed) {
+    e.root.visible = byId[id].mode === 'int' ? true : mode === 'ext';
+  }
 }
 
 const exteriorGroup = new THREE.Group();
@@ -1575,11 +1705,11 @@ function install(p, variantId, fly = true) {
   const root = p.build(variantId, car);
   root.userData = { productId: p.id };
   root.visible = p.mode === 'int' ? true : mode === 'ext';
-  if (photoMode) root.visible = p.mode === 'int' && PHOTO_SHOW.includes(p.intView);
   if (p.mode === 'int') applyCabinDelta(root, p.split);
   productsGroup.add(root);
   installed.set(p.id, { root, variant: variantId });
   refreshCards(); refreshCartBadge(); persist();
+  if (photoMode) applyPhotoSlots();
   if (fly && !photoMode) {
     if (p.mode === 'int') setView(p.intView || 'overview');
     else flyTo(p.focus);
@@ -1625,7 +1755,8 @@ const EXT_VIEWS = {
 };
 const INT_VIEW_DEFS = [
   { id: 'overview', label: '전체' },
-  { id: 'photo', label: '실사 대시', glbOnly: true },
+  { id: 'photo_dash', label: '실사 대시' },
+  { id: 'photo_console', label: '실사 콘솔' },
   { id: 'dash', label: '대시보드' },
   { id: 'console', label: '콘솔' },
   { id: 'door', label: '도어' },
@@ -1648,21 +1779,20 @@ document.querySelectorAll('[data-eview]').forEach((b) => b.addEventListener('cli
 }));
 function intView(name) {
   const cv = car?._prep?.T && car.asset.cabin?.views;
-  return (cv && cv[name]) || INT_VIEWS[name];
+  const v = (cv && cv[name]) || INT_VIEWS[name];
+  if (camera.aspect < 1.25) {
+    // 세로 화면: 하단 상품 패널에 가리지 않도록 피사체를 화면 위쪽으로
+    return { ...v, tgt: [v.tgt[0], v.tgt[1] - 0.14, v.tgt[2]] };
+  }
+  return v;
 }
 let curIntView = 'overview';
 function setView(name, fly = true) {
-  if (name === 'photo') {
+  if (photoById[name]) {
     curIntView = name;
-    document.querySelectorAll('#intViewChips .chip').forEach((x) => x.classList.toggle('on', x.id === 'iv_photo'));
-    enterPhotoMode();
-    flyAnim = null;
-    camera.position.set(...PHOTO_CAM.pos);
-    orbit.target.set(...PHOTO_CAM.tgt);
-    curBaseFov = PHOTO_CAM.fov;
-    camera.fov = fitFov(curBaseFov); camera.updateProjectionMatrix();
-    fitPhotoPlane();
-    showHint('실사 사진(모델 3, CC BY: S. Jurvetson) 위에 상품을 겹쳐 봅니다 — 대시·콘솔 상품만 표시', 4000);
+    document.querySelectorAll('#intViewChips .chip').forEach((x) => x.classList.toggle('on', x.id === 'iv_' + name));
+    enterPhotoMode(photoById[name]);
+    showHint('실사 사진(CC BY: S. Jurvetson) 위 상품 미리보기 — 해당 구역 상품만 표시됩니다', 3500);
     return;
   }
   if (photoMode) { exitPhotoMode(); setMode('int', false); }
@@ -1683,10 +1813,7 @@ function setView(name, fly = true) {
     const b = document.createElement('button');
     b.className = 'chip' + (d.id === 'overview' ? ' on' : '');
     b.id = 'iv_' + d.id; b.textContent = d.label;
-    b.addEventListener('click', () => {
-      if (d.glbOnly && !car?._prep?.T) { showHint('이 차량에서는 아직 지원되지 않습니다', 2500); return; }
-      setView(d.id);
-    });
+    b.addEventListener('click', () => setView(d.id));
     el.appendChild(b);
   }
 })();
@@ -2157,7 +2284,7 @@ function resize() {
   camera.aspect = w / h;
   if (!flyAnim) camera.fov = fitFov(curBaseFov);
   camera.updateProjectionMatrix();
-  fitPhotoPlane();
+  if (photoMode) { camera.updateMatrixWorld(true); fitPhotoPlane(); applyPhotoSlots(); }
 }
 new ResizeObserver(resize).observe(stage);
 resize();
