@@ -209,10 +209,7 @@
         <button class="chip" id="paintBtn">차량 색상</button>
       </span>
       <span class="chipSet" id="intChips" hidden>
-        <button class="chip on" data-iview="overview">전체</button>
-        <button class="chip" data-iview="driver">운전석</button>
-        <button class="chip" data-iview="passenger">조수석</button>
-        <button class="chip" data-iview="rear">2열</button>
+        <span class="chipSet" id="intViewChips"></span>
         <button class="chip" id="themeBtn">내장: 블랙</button>
       </span>
       <span class="chipSet" id="splatChips" hidden>
@@ -307,6 +304,10 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 import { Reflector } from 'three/addons/objects/Reflector.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { SSAOPass } from 'three/addons/postprocessing/SSAOPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
 const $ = (id) => document.getElementById(id);
 const won = (n) => '₩' + n.toLocaleString('ko-KR');
@@ -314,7 +315,7 @@ const won = (n) => '₩' + n.toLocaleString('ko-KR');
 /* ---------- 렌더러 / 장면 ---------- */
 const stage = $('stage');
 const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.75));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -326,6 +327,15 @@ scene.background = new THREE.Color(0x0c0f13);
 scene.fog = new THREE.Fog(0x0c0f13, 12, 26);
 
 const camera = new THREE.PerspectiveCamera(50, 1, 0.01, 80);
+
+const composer = new EffectComposer(renderer);
+composer.addPass(new RenderPass(scene, camera));
+const ssao = new SSAOPass(scene, camera, 1, 1);
+ssao.kernelRadius = 0.22;
+ssao.minDistance = 0.0008;
+ssao.maxDistance = 0.12;
+composer.addPass(ssao);
+composer.addPass(new OutputPass());
 
 const orbit = new OrbitControls(camera, renderer.domElement);
 orbit.enableDamping = true;
@@ -554,12 +564,12 @@ const CARS = [
     asset: { url: 'assets/model_y_2022.glb.wasm', len: 4.76, rotY: Math.PI, paintRe: /paint|clearcoat/i, interiorRe: /palette/i,
       cabin: { floorY: 0.642, dashTopY: 0.761, dashFrontZ: -0.092, consoleTopY: 0.70, doorX: 0.865, roofY: 1.571,
         rearScreen: [0, 0.60, 0.975],
-        views: { overview: { pos: [0, 1.38, 1.35], tgt: [0, 0.72, -0.1] }, driver: { pos: [0.12, 1.08, 0.2], tgt: [-0.28, 0.72, -0.26] }, passenger: { pos: [-0.12, 1.08, 0.2], tgt: [0.28, 0.72, -0.26] }, rear: { pos: [0, 1.12, 0.25], tgt: [0, 0.72, 1.15] } } } } },
+        views: { overview: { pos: [0, 1.3, 1.12], tgt: [0, 0.6, -0.55], fov: 72 }, dash: { pos: [0, 1.1, 0.34], tgt: [0, 0.73, -0.27], fov: 58 }, console: { pos: [0.35, 1.18, 0.75], tgt: [-0.02, 0.7, 0.25], fov: 56 }, door: { pos: [0.3, 1.05, 0.3], tgt: [-0.8, 0.7, -0.05], fov: 64 }, floor: { pos: [0.05, 1.2, 0.55], tgt: [-0.18, 0.64, -0.05], fov: 62 }, rear: { pos: [0, 1.25, 0.1], tgt: [0, 0.62, 1.15], fov: 68 }, roof: { pos: [0.1, 0.9, 0.55], tgt: [0, 1.52, 0.4], fov: 72 } } } } },
   { id: 'legacyY', label: '모델 Y 레거시', sub: '2020~2024 · SUV', type: 'suv', width: 1.86, rearDisplay: false, defPaint: '#e8e9ea',
     asset: { url: 'assets/model_y_2022.glb.wasm', len: 4.76, rotY: Math.PI, paintRe: /paint|clearcoat/i, interiorRe: /palette/i,
       cabin: { floorY: 0.642, dashTopY: 0.761, dashFrontZ: -0.092, consoleTopY: 0.70, doorX: 0.865, roofY: 1.571,
         rearScreen: [0, 0.60, 0.975],
-        views: { overview: { pos: [0, 1.38, 1.35], tgt: [0, 0.72, -0.1] }, driver: { pos: [0.12, 1.08, 0.2], tgt: [-0.28, 0.72, -0.26] }, passenger: { pos: [-0.12, 1.08, 0.2], tgt: [0.28, 0.72, -0.26] }, rear: { pos: [0, 1.12, 0.25], tgt: [0, 0.72, 1.15] } } } } },
+        views: { overview: { pos: [0, 1.3, 1.12], tgt: [0, 0.6, -0.55], fov: 72 }, dash: { pos: [0, 1.1, 0.34], tgt: [0, 0.73, -0.27], fov: 58 }, console: { pos: [0.35, 1.18, 0.75], tgt: [-0.02, 0.7, 0.25], fov: 56 }, door: { pos: [0.3, 1.05, 0.3], tgt: [-0.8, 0.7, -0.05], fov: 64 }, floor: { pos: [0.05, 1.2, 0.55], tgt: [-0.18, 0.64, -0.05], fov: 62 }, rear: { pos: [0, 1.25, 0.1], tgt: [0, 0.62, 1.15], fov: 68 }, roof: { pos: [0.1, 0.9, 0.55], tgt: [0, 1.52, 0.4], fov: 72 } } } } },
   { id: 'highland', label: '모델 3 하이랜드', sub: '2024~ · 세단', type: 'sedan', width: 1.78, rearDisplay: true, defPaint: '#8e1626',
     asset: { url: 'assets/model_3/scene.json', len: 4.69, rotY: Math.PI, paintRe: /car_?paint|clearcoat/i } },
 ];
@@ -935,9 +945,19 @@ function buildRearScreen() {
 }
 
 let themeable = [];
+const microBump = canvasTex(64, (g, s) => {
+  g.fillStyle = '#808080'; g.fillRect(0, 0, s, s);
+  const img = g.getImageData(0, 0, s, s);
+  for (let i = 0; i < img.data.length; i += 4) {
+    const n = (Math.random() - 0.5) * 60;
+    img.data[i] += n; img.data[i + 1] += n; img.data[i + 2] += n;
+  }
+  g.putImageData(img, 0, 0);
+}, 6);
 function themedMat(blackHex, whiteHex, opts = {}) {
   const m = new THREE.MeshPhysicalMaterial({
-    color: blackHex, roughness: 0.62, clearcoat: 0.25, clearcoatRoughness: 0.5, ...opts,
+    color: blackHex, roughness: 0.62, clearcoat: 0.25, clearcoatRoughness: 0.5,
+    bumpMap: microBump, bumpScale: 0.6, ...opts,
   });
   m.userData = { blackHex, whiteHex };
   themeable.push(m);
@@ -1101,7 +1121,7 @@ function buildInterior(car) {
 function applyTheme(t) {
   for (const m of themeable) m.color.set(t === 'white' ? m.userData.whiteHex : m.userData.blackHex);
   // GLB 실내 염색 (interiorRe로 수집된 재질)
-  if (car?._prep) for (const m of car._prep.interiorMats) m.color.set(t === 'white' ? 0xd9d5cc : 0x565a63);
+  if (car?._prep) for (const m of car._prep.interiorMats) m.color.set(t === 'white' ? 0xd9d5cc : 0x60656e);
 }
 
 /* ---------- 상품 카탈로그 ---------- */
@@ -1147,13 +1167,13 @@ const INT_CATEGORIES = [
 
 const PRODUCTS = [
   {
-    id: 'dashTrim', mode: 'int', cat: 'trim', name: '대시보드 트림', price: 39000,
+    id: 'dashTrim', mode: 'int', intView: 'dash', cat: 'trim', name: '대시보드 트림', price: 39000,
     fit: ALL, variants: trimV, def: 'carbon',
     focus: { pos: [0, 1.0, 0.15], tgt: [0, 0.74, -0.85] },
     build(v) { const g = new THREE.Group(); g.add(strip(MAT[v](), 1.3, 0.05, 0.016, 0, 0.77, -0.63, -0.1)); return g; },
   },
   {
-    id: 'doorTrim', mode: 'int', cat: 'trim', name: '도어 트림 2P', price: 29000,
+    id: 'doorTrim', mode: 'int', intView: 'door', cat: 'trim', name: '도어 트림 2P', price: 29000,
     fit: ALL, split: true, variants: trimV, def: 'carbon',
     focus: { pos: [0.15, 0.95, 0.5], tgt: [-0.78, 0.6, -0.2] },
     build(v) {
@@ -1164,7 +1184,7 @@ const PRODUCTS = [
     thumbBuild() { return strip(MAT.carbon(), 0.05, 0.05, 0.7, 0, 0, 0); },
   },
   {
-    id: 'steerCover', mode: 'int', cat: 'trim', name: '스티어링 커버', price: 27000,
+    id: 'steerCover', mode: 'int', intView: 'dash', cat: 'trim', name: '스티어링 커버', price: 27000,
     fit: ALL, glbHide: true, variants: [trimV[0], trimV[1]], def: 'carbon',
     focus: { pos: [-0.38, 0.95, 0.1], tgt: [-0.38, 0.73, -0.6] },
     build(v) {
@@ -1175,7 +1195,7 @@ const PRODUCTS = [
     },
   },
   {
-    id: 'ambient', mode: 'int', cat: 'light', name: '엠비언트 확장 키트', price: 25000,
+    id: 'ambient', mode: 'int', intView: 'dash', cat: 'light', name: '엠비언트 확장 키트', price: 25000,
     fit: ALL, split: true, variants: lightV, def: '#7fd4ff',
     focus: { pos: [0, 0.9, 0.35], tgt: [0, 0.66, -0.75] },
     build(v) {
@@ -1193,7 +1213,7 @@ const PRODUCTS = [
     thumbBuild() { return new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.012, 0.016), glowMat('#7fd4ff')); },
   },
   {
-    id: 'footwell', mode: 'int', cat: 'light', name: '풋웰 라이트', price: 15000,
+    id: 'footwell', mode: 'int', intView: 'floor', cat: 'light', name: '풋웰 라이트', price: 15000,
     fit: ALL, split: true, variants: lightV, def: '#7fd4ff',
     focus: { pos: [0, 0.75, 0.3], tgt: [0, 0.1, -0.55] },
     build(v) {
@@ -1208,7 +1228,7 @@ const PRODUCTS = [
     thumbBuild() { return new THREE.Mesh(new THREE.CircleGeometry(0.06, 24), glowMat('#7fd4ff')); },
   },
   {
-    id: 'cupTray', mode: 'int', cat: 'console', name: '컵홀더 트레이', price: 12000,
+    id: 'cupTray', mode: 'int', intView: 'console', cat: 'console', name: '컵홀더 트레이', price: 12000,
     fit: ['juniper', 'highland'], variants: [{ id: 'black', label: '블랙', sw: SW.black }, { id: 'carbon', label: '카본', sw: SW.carbon }], def: 'black',
     focus: { pos: [0.25, 0.85, 0.25], tgt: [0, 0.43, -0.28] },
     build(v) {
@@ -1223,7 +1243,7 @@ const PRODUCTS = [
     },
   },
   {
-    id: 'organizer', mode: 'int', cat: 'console', name: '콘솔 오거나이저', price: 18000, popular: true,
+    id: 'organizer', mode: 'int', intView: 'console', cat: 'console', name: '콘솔 오거나이저', price: 18000, popular: true,
     fit: ['juniper', 'highland'], variants: [{ id: 'black', label: '블랙', sw: SW.black }, { id: 'white', label: '화이트', sw: SW.white }], def: 'black',
     focus: { pos: [0.3, 0.9, 0.5], tgt: [0, 0.43, 0.1] },
     build(v) {
@@ -1239,7 +1259,7 @@ const PRODUCTS = [
     },
   },
   {
-    id: 'doorPocket', mode: 'int', cat: 'console', name: '도어 포켓 수납함 2P', price: 14000, popular: true,
+    id: 'doorPocket', mode: 'int', intView: 'door', cat: 'console', name: '도어 포켓 수납함 2P', price: 14000, popular: true,
     fit: ['juniper', 'highland'], split: true, variants: [{ id: 'black', label: '블랙 TPE', sw: SW.black }], def: 'black',
     focus: { pos: [0.1, 0.8, 0.45], tgt: [-0.75, 0.4, -0.2] },
     build(v) {
@@ -1264,7 +1284,7 @@ const PRODUCTS = [
     },
   },
   {
-    id: 'phoneMount', mode: 'int', cat: 'console', name: '폰 거치대', price: 22000,
+    id: 'phoneMount', mode: 'int', intView: 'dash', cat: 'console', name: '폰 거치대', price: 22000,
     fit: ALL, variants: [{ id: 'L', label: '좌측 장착', sw: SW.black }, { id: 'R', label: '우측 장착', sw: SW.black }], def: 'L',
     focus: { pos: [-0.1, 0.95, 0.1], tgt: [-0.28, 0.84, -0.75] },
     build(v) {
@@ -1284,7 +1304,7 @@ const PRODUCTS = [
     },
   },
   {
-    id: 'frontMats', mode: 'int', cat: 'protect', name: 'TPE 올웨더 매트 1열', price: 49000, popular: true,
+    id: 'frontMats', mode: 'int', intView: 'floor', cat: 'protect', name: 'TPE 올웨더 매트 1열', price: 49000, popular: true,
     fit: ALL, split: true, variants: matV, def: 'black',
     focus: { pos: [0, 1.15, 0.55], tgt: [0, 0.05, -0.45] },
     build(v) {
@@ -1300,7 +1320,7 @@ const PRODUCTS = [
     thumbBuild() { return new THREE.Mesh(new RoundedBoxGeometry(0.42, 0.008, 0.55, 2, 0.003), ribMat('black')); },
   },
   {
-    id: 'rearMat', mode: 'int', cat: 'protect', name: 'TPE 올웨더 매트 2열', price: 35000,
+    id: 'rearMat', mode: 'int', intView: 'rear', cat: 'protect', name: 'TPE 올웨더 매트 2열', price: 35000,
     fit: ALL, variants: matV, def: 'black',
     focus: { pos: [0.4, 1.2, 0.2], tgt: [0, 0.1, 0.95] },
     build(v) {
@@ -1311,7 +1331,7 @@ const PRODUCTS = [
     },
   },
   {
-    id: 'kickMat', mode: 'int', cat: 'protect', name: '시트백 킥매트 2P', price: 16000,
+    id: 'kickMat', mode: 'int', intView: 'rear', cat: 'protect', name: '시트백 킥매트 2P', price: 16000,
     fit: ALL, glbHide: true, variants: [{ id: 'black', label: '블랙', sw: SW.black }, { id: 'carbon', label: '카본', sw: SW.carbon }], def: 'black',
     focus: { pos: [0, 1.0, 1.6], tgt: [0, 0.75, 0.6] },
     build(v) {
@@ -1322,7 +1342,7 @@ const PRODUCTS = [
     thumbBuild() { return strip(MAT.black(), 0.4, 0.45, 0.01, 0, 0, 0); },
   },
   {
-    id: 'doorSill', mode: 'int', cat: 'protect', name: '도어씰 프로텍터 4P', price: 19000,
+    id: 'doorSill', mode: 'int', intView: 'floor', cat: 'protect', name: '도어씰 프로텍터 4P', price: 19000,
     fit: ALL, split: true, variants: [{ id: 'carbon', label: '카본', sw: SW.carbon }, { id: 'black', label: '블랙', sw: SW.black }], def: 'carbon',
     focus: { pos: [0.3, 0.9, 0.6], tgt: [-0.72, 0.05, -0.2] },
     build(v) {
@@ -1334,7 +1354,7 @@ const PRODUCTS = [
     thumbBuild() { return strip(MAT.carbon(), 0.1, 0.01, 0.5, 0, 0, 0); },
   },
   {
-    id: 'screenFilm', mode: 'int', cat: 'film', name: '센터 디스플레이 매트필름', price: 15000, popular: true,
+    id: 'screenFilm', mode: 'int', intView: 'dash', cat: 'film', name: '센터 디스플레이 매트필름', price: 15000, popular: true,
     fit: ALL, variants: [{ id: 'matte', label: '매트', sw: '#3c424b' }, { id: 'lowRef', label: '저반사', sw: '#262c35' }], def: 'matte',
     focus: { pos: [0.05, 0.95, -0.15], tgt: [0, 0.82, -0.66] },
     build(v) {
@@ -1352,7 +1372,7 @@ const PRODUCTS = [
     },
   },
   {
-    id: 'rearScreenFilm', mode: 'int', cat: 'film', name: '후석 디스플레이 필름', price: 9000,
+    id: 'rearScreenFilm', mode: 'int', intView: 'rear', cat: 'film', name: '후석 디스플레이 필름', price: 9000,
     fit: ['juniper', 'highland'],
     variants: [{ id: 'matte', label: '매트', sw: '#3c424b' }], def: 'matte',
     focus: { pos: [0, 0.85, 1.3], tgt: [0, 0.5, 0.38] },
@@ -1368,7 +1388,7 @@ const PRODUCTS = [
     },
   },
   {
-    id: 'sunshade', mode: 'int', cat: 'film', name: '글라스루프 선쉐이드', price: 32000, popular: true,
+    id: 'sunshade', mode: 'int', intView: 'roof', cat: 'film', name: '글라스루프 선쉐이드', price: 32000, popular: true,
     fit: ['juniper', 'legacyY'],
     variants: [{ id: 'black', label: '블랙 메쉬', sw: SW.black }, { id: 'silver', label: '실버 코팅', sw: SW.silver }], def: 'black',
     focus: { pos: [0.3, 0.75, 0.9], tgt: [0, 1.43, 0.3] },
@@ -1486,11 +1506,6 @@ function applyCabinDelta(root, split = false) {
     t.position.add(Tm(c).sub(c));
   }
 }
-function mapFocus(f, isInt) {
-  const Tm = car?._prep?.T;
-  if (!Tm || !isInt) return f;
-  return { pos: Tm(new THREE.Vector3(...f.pos)).toArray(), tgt: Tm(new THREE.Vector3(...f.tgt)).toArray() };
-}
 function install(p, variantId, fly = true) {
   removeItem(p.id, false);
   const root = p.build(variantId, car);
@@ -1500,7 +1515,10 @@ function install(p, variantId, fly = true) {
   productsGroup.add(root);
   installed.set(p.id, { root, variant: variantId });
   refreshCards(); refreshCartBadge(); persist();
-  if (fly) flyTo(mapFocus(p.focus, p.mode === 'int'));
+  if (fly) {
+    if (p.mode === 'int') setView(p.intView || 'overview');
+    else flyTo(p.focus);
+  }
 }
 function removeItem(id, refresh = true) {
   const e = installed.get(id);
@@ -1522,6 +1540,7 @@ function flyTo(f) {
     t: 0,
     p0: camera.position.clone(), p1: new THREE.Vector3(...f.pos),
     t0: orbit.target.clone(), t1: new THREE.Vector3(...f.tgt),
+    f0: camera.fov, f1: f.fov || camera.fov,
   };
 }
 const EXT_VIEWS = {
@@ -1530,11 +1549,23 @@ const EXT_VIEWS = {
   rear: { pos: [-0.6, 1.2, 5.6], tgt: [0, 0.75, 0.5] },
   side: { pos: [-5.6, 1.0, 0.2], tgt: [0, 0.7, 0.2] },
 };
+const INT_VIEW_DEFS = [
+  { id: 'overview', label: '전체' },
+  { id: 'dash', label: '대시보드' },
+  { id: 'console', label: '콘솔' },
+  { id: 'door', label: '도어' },
+  { id: 'floor', label: '바닥·매트' },
+  { id: 'rear', label: '2열' },
+  { id: 'roof', label: '루프' },
+];
 const INT_VIEWS = {
-  overview: { pos: [0, 1.28, 1.2], tgt: [0, 0.5, -0.55] },
-  driver: { pos: [-0.35, 1.02, 0.12], tgt: [0.05, 0.7, -0.72] },
-  passenger: { pos: [0.35, 1.02, 0.12], tgt: [-0.05, 0.7, -0.72] },
-  rear: { pos: [0, 1.05, 0.5], tgt: [0, 0.55, 1.45] },
+  overview: { pos: [0, 1.3, 1.75], tgt: [0, 0.55, -0.3], fov: 74 },
+  dash: { pos: [0, 0.95, 0.2], tgt: [0, 0.72, -0.66], fov: 56 },
+  console: { pos: [0.35, 1.05, 0.5], tgt: [0, 0.42, -0.05], fov: 56 },
+  door: { pos: [0.3, 0.9, 0.2], tgt: [-0.78, 0.55, -0.2], fov: 62 },
+  floor: { pos: [0.1, 1.0, 0.5], tgt: [-0.2, 0.02, -0.4], fov: 62 },
+  rear: { pos: [0, 1.05, 0.45], tgt: [0, 0.6, 1.4], fov: 68 },
+  roof: { pos: [0.15, 0.8, 0.6], tgt: [0, 1.44, 0.3], fov: 70 },
 };
 document.querySelectorAll('[data-eview]').forEach((b) => b.addEventListener('click', () => {
   document.querySelectorAll('[data-eview]').forEach((x) => x.classList.toggle('on', x === b));
@@ -1542,12 +1573,30 @@ document.querySelectorAll('[data-eview]').forEach((b) => b.addEventListener('cli
 }));
 function intView(name) {
   const cv = car?._prep?.T && car.asset.cabin?.views;
-  return cv ? cv[name] : INT_VIEWS[name];
+  return (cv && cv[name]) || INT_VIEWS[name];
 }
-document.querySelectorAll('[data-iview]').forEach((b) => b.addEventListener('click', () => {
-  document.querySelectorAll('[data-iview]').forEach((x) => x.classList.toggle('on', x === b));
-  flyTo(intView(b.dataset.iview));
-}));
+let curIntView = 'overview';
+function setView(name, fly = true) {
+  curIntView = name;
+  document.querySelectorAll('#intViewChips .chip').forEach((x) => x.classList.toggle('on', x.id === 'iv_' + name));
+  const v = intView(name);
+  if (fly) flyTo(v);
+  else {
+    flyAnim = null;
+    camera.position.set(...v.pos); orbit.target.set(...v.tgt);
+    camera.fov = v.fov || camera.fov; camera.updateProjectionMatrix();
+  }
+}
+(function buildIntViewChips() {
+  const el = $('intViewChips');
+  for (const d of INT_VIEW_DEFS) {
+    const b = document.createElement('button');
+    b.className = 'chip' + (d.id === 'overview' ? ' on' : '');
+    b.id = 'iv_' + d.id; b.textContent = d.label;
+    b.addEventListener('click', () => setView(d.id));
+    el.appendChild(b);
+  }
+})();
 
 /* ---------- 모드 전환 ---------- */
 function setMode(m, fly = true) {
@@ -1568,18 +1617,25 @@ function setMode(m, fly = true) {
     e.root.visible = byId[id].mode === 'int' ? true : m === 'ext';
   }
   if (m === 'ext') {
+    orbit.enabled = true;
     orbit.minDistance = 2.2; orbit.maxDistance = 10; orbit.maxPolarAngle = Math.PI * 0.52;
     hemi.intensity = 0.55; sun.intensity = 1.9;
+    scene.background.set(0x0c0f13); scene.fog.color.set(0x0c0f13);
+    scene.fog.near = 12; scene.fog.far = 26;
   } else {
-    orbit.minDistance = 0.25; orbit.maxDistance = 6; orbit.maxPolarAngle = Math.PI * 0.92;
-    hemi.intensity = 2.6; sun.intensity = 2.3;
+    orbit.enabled = false; // 지정 시점 모드: 궤도 입력·보정 비활성
+    orbit.minDistance = 0.01; orbit.maxDistance = 50; orbit.maxPolarAngle = Math.PI;
+    hemi.intensity = 2.9; sun.intensity = 2.4;
+    scene.background.set(0x2b323c); scene.fog.color.set(0x2b323c);
+    scene.fog.near = 7; scene.fog.far = 20;
   }
-  scene.environmentIntensity = m === 'int' ? 1.8 : 1.0;
+  cyc.visible = m === 'ext';
+  scene.environmentIntensity = m === 'int' ? 2.1 : 1.0;
   cabinExtrasGroup.visible = m === 'int' && glbCabin && !splatActive;
   closeOptions();
   activeCat = 'all';
   buildCats(); refreshCards();
-  if (fly) flyTo(m === 'ext' ? EXT_VIEWS.overview : intView('overview'));
+  if (fly) { if (m === 'ext') flyTo({ ...EXT_VIEWS.overview, fov: 50 }); else setView('overview'); }
 }
 $('modeExt').addEventListener('click', () => setMode('ext'));
 $('modeInt').addEventListener('click', () => setMode('int'));
@@ -1795,7 +1851,7 @@ function refreshCards() {
       b.appendChild(bd);
     }
     b.addEventListener('click', () => {
-      if (installed.has(p.id)) { flyTo(mapFocus(p.focus, p.mode === 'int')); openOptions(p); }
+      if (installed.has(p.id)) { if (p.mode === 'int') setView(p.intView || 'overview'); else flyTo(p.focus); openOptions(p); }
       else { install(p, p.def); openOptions(p); showHint(`${p.name} 장착 완료`, 1800); }
     });
     el.appendChild(b);
@@ -1888,7 +1944,8 @@ renderer.domElement.addEventListener('pointerup', (e) => {
     while (o && !o.userData?.productId) o = o.parent;
     if (o && o.visible) {
       const p = byId[o.userData.productId];
-      flyTo(mapFocus(p.focus, p.mode === 'int')); openOptions(p);
+      if (p.mode === 'int') setView(p.intView || 'overview'); else flyTo(p.focus);
+      openOptions(p);
       return;
     }
   }
@@ -1944,7 +2001,7 @@ function refreshCart() {
 
 /* ---------- 스크린샷 ---------- */
 $('shotBtn').addEventListener('click', () => {
-  renderer.render(scene, camera);
+  composer.render();
   $('shotImg').src = renderer.domElement.toDataURL('image/png');
   $('shotModal').hidden = false;
 });
@@ -2006,6 +2063,7 @@ if (store.carId && carById[store.carId]) {
 function resize() {
   const w = stage.clientWidth, h = stage.clientHeight;
   renderer.setSize(w, h, false);
+  composer.setSize(w, h);
   camera.aspect = w / h;
   camera.updateProjectionMatrix();
 }
@@ -2020,14 +2078,19 @@ function loop() {
     const k = 1 - Math.pow(1 - flyAnim.t, 3);
     camera.position.lerpVectors(flyAnim.p0, flyAnim.p1, k);
     orbit.target.lerpVectors(flyAnim.t0, flyAnim.t1, k);
+    camera.fov = flyAnim.f0 + (flyAnim.f1 - flyAnim.f0) * k;
+    camera.updateProjectionMatrix();
     if (flyAnim.t >= 1) flyAnim = null;
   }
-  orbit.update();
-  renderer.render(scene, camera);
+  if (orbit.enabled) orbit.update();
+  else camera.lookAt(orbit.target); // 지정 시점 모드: 타깃 응시 유지
+  composer.render();
   frames++;
   const now = performance.now();
   if (now - fpsT >= 1000) {
-    $('fps').textContent = Math.round(frames * 1000 / (now - fpsT)) + ' fps';
+    const fps = Math.round(frames * 1000 / (now - fpsT));
+    $('fps').textContent = fps + ' fps';
+    if (fps < 22) ssao.enabled = false;
     frames = 0; fpsT = now;
   }
 }
