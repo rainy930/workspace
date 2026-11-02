@@ -86,6 +86,12 @@
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
   #drawerHead { display: flex; align-items: center; gap: 8px; padding-block: 10px 2px; }
+  #drawerToggle {
+    background: var(--panel-2); border: 1px solid var(--line); color: var(--fg);
+    border-radius: 8px; width: 34px; height: 26px; font-size: 13px; cursor: pointer; flex: 0 0 auto;
+  }
+  #main.collapsed #cats, #main.collapsed #cards, #main.collapsed #disclaim { display: none; }
+  #main.collapsed #drawerToggle { transform: rotate(180deg); }
   #drawerTitle { font-size: 12.5px; color: var(--fg-dim); }
   #drawerMeta { margin-left: auto; font-size: 12px; color: var(--fg-dim); font-variant-numeric: tabular-nums; }
   #cats { display: flex; gap: 6px; overflow-x: auto; padding-block: 8px; scrollbar-width: none; }
@@ -233,6 +239,7 @@
   <div id="drawer">
     <div id="main">
       <div id="drawerHead">
+        <button id="drawerToggle" aria-label="상품 패널 접기/펼치기">▾</button>
         <span id="drawerTitle"></span>
         <span id="drawerMeta"></span>
       </div>
@@ -758,12 +765,12 @@ const CARS = [
     asset: { url: 'assets/model_y_2022.glb.wasm', len: 4.76, rotY: Math.PI, paintRe: /paint|clearcoat/i, interiorRe: /palette/i,
       cabin: { floorY: 0.642, dashTopY: 0.761, dashFrontZ: -0.092, consoleTopY: 0.70, doorX: 0.865, roofY: 1.571,
         rearScreen: [0, 0.60, 0.975],
-        views: { overview: { pos: [0, 1.3, 1.12], tgt: [0, 0.6, -0.55], fov: 72 }, dash: { pos: [0, 1.1, 0.34], tgt: [0, 0.73, -0.27], fov: 58 }, console: { pos: [0.35, 1.18, 0.75], tgt: [-0.02, 0.7, 0.25], fov: 56 }, door: { pos: [0.3, 1.05, 0.3], tgt: [-0.8, 0.7, -0.05], fov: 64 }, floor: { pos: [0.05, 1.2, 0.55], tgt: [-0.18, 0.64, -0.05], fov: 62 }, rear: { pos: [0, 1.25, 0.1], tgt: [0, 0.62, 1.15], fov: 68 }, roof: { pos: [0.1, 0.9, 0.55], tgt: [0, 1.52, 0.4], fov: 72 } } } } },
+        views: { overview: { pos: [0, 1.3, 1.12], tgt: [0, 0.6, -0.55], fov: 72 }, dash: { pos: [0, 1.1, 0.34], tgt: [0, 0.73, -0.27], fov: 58 }, console: { pos: [0.35, 1.18, 0.75], tgt: [-0.02, 0.7, 0.25], fov: 56 }, door: { pos: [0.12, 1.38, -0.05], tgt: [-0.88, 0.5, -0.18], fov: 60 }, floor: { pos: [-0.05, 1.32, 0.35], tgt: [-0.36, 0.6, -0.32], fov: 64 }, rear: { pos: [0, 1.25, 0.1], tgt: [0, 0.62, 1.15], fov: 68 }, roof: { pos: [0.1, 0.9, 0.55], tgt: [0, 1.52, 0.4], fov: 72 } } } } },
   { id: 'legacyY', label: '모델 Y 레거시', sub: '2020~2024 · SUV', type: 'suv', width: 1.86, rearDisplay: false, defPaint: '#e8e9ea',
     asset: { url: 'assets/model_y_2022.glb.wasm', len: 4.76, rotY: Math.PI, paintRe: /paint|clearcoat/i, interiorRe: /palette/i,
       cabin: { floorY: 0.642, dashTopY: 0.761, dashFrontZ: -0.092, consoleTopY: 0.70, doorX: 0.865, roofY: 1.571,
         rearScreen: [0, 0.60, 0.975],
-        views: { overview: { pos: [0, 1.3, 1.12], tgt: [0, 0.6, -0.55], fov: 72 }, dash: { pos: [0, 1.1, 0.34], tgt: [0, 0.73, -0.27], fov: 58 }, console: { pos: [0.35, 1.18, 0.75], tgt: [-0.02, 0.7, 0.25], fov: 56 }, door: { pos: [0.3, 1.05, 0.3], tgt: [-0.8, 0.7, -0.05], fov: 64 }, floor: { pos: [0.05, 1.2, 0.55], tgt: [-0.18, 0.64, -0.05], fov: 62 }, rear: { pos: [0, 1.25, 0.1], tgt: [0, 0.62, 1.15], fov: 68 }, roof: { pos: [0.1, 0.9, 0.55], tgt: [0, 1.52, 0.4], fov: 72 } } } } },
+        views: { overview: { pos: [0, 1.3, 1.12], tgt: [0, 0.6, -0.55], fov: 72 }, dash: { pos: [0, 1.1, 0.34], tgt: [0, 0.73, -0.27], fov: 58 }, console: { pos: [0.35, 1.18, 0.75], tgt: [-0.02, 0.7, 0.25], fov: 56 }, door: { pos: [0.12, 1.38, -0.05], tgt: [-0.88, 0.5, -0.18], fov: 60 }, floor: { pos: [-0.05, 1.32, 0.35], tgt: [-0.36, 0.6, -0.32], fov: 64 }, rear: { pos: [0, 1.25, 0.1], tgt: [0, 0.62, 1.15], fov: 68 }, roof: { pos: [0.1, 0.9, 0.55], tgt: [0, 1.52, 0.4], fov: 72 } } } } },
   { id: 'highland', label: '모델 3 하이랜드', sub: '2024~ · 세단', type: 'sedan', width: 1.78, rearDisplay: true, defPaint: '#8e1626',
     asset: { url: 'assets/model_3/scene.json', len: 4.69, rotY: Math.PI, paintRe: /car_?paint|clearcoat/i } },
 ];
@@ -2224,6 +2231,11 @@ $('shotBtn').addEventListener('click', () => {
 });
 $('shotClose').addEventListener('click', () => { $('shotModal').hidden = true; });
 
+/* 드로어 접기: 3D 가시 영역 확장 */
+$('drawerToggle').addEventListener('click', () => {
+  $('main').classList.toggle('collapsed');
+});
+
 /* ---------- 힌트 ---------- */
 let hintTimer = 0;
 function showHint(text, ms) {
@@ -2279,7 +2291,7 @@ if (store.carId && carById[store.carId]) {
 /* ---------- 루프 / 리사이즈 / FPS ---------- */
 function resize() {
   const w = stage.clientWidth, h = stage.clientHeight;
-  renderer.setSize(w, h, false);
+  renderer.setSize(w, h); // CSS 크기도 함께 설정 (고DPI 폰에서 캔버스가 화면을 넘치던 버그 수정)
   composer.setSize(w, h);
   camera.aspect = w / h;
   if (!flyAnim) camera.fov = fitFov(curBaseFov);
