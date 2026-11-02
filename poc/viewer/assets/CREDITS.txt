@@ -1,0 +1,13 @@
+외관 3D 모델 출처 (Attribution)
+
+1) Model Y (assets/model_y_2022.glb)
+   "2021 Tesla Model Y" by tonielpro520 — CC-BY 4.0
+   https://sketchfab.com/3d-models/2021-tesla-model-y-59e2ead369984b1a85c800ff6cf6789d
+   파생: TMC 개조판(도어/휠 분절, 재질 수정) — CC-BY 4.0 유지
+
+2) Model 3 (assets/model_3/)
+   "Tesla Model 3" by OneSteven (https://sketchfab.com/Steven007) — CC-BY-NC 4.0
+   https://sketchfab.com/3d-models/tesla-model-3-117d7dbdd6f94df9886c42995cdd06db
+   ※ 비상업(NC) 라이선스 — POC 검증 전용, 상업 배포 전 교체 필요
+
+차량명(Tesla, Model Y, Model 3)은 호환 대상 식별 표기이며 제조사와 무관합니다.
