@@ -308,6 +308,7 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { SSAOPass } from 'three/addons/postprocessing/SSAOPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
 
 const $ = (id) => document.getElementById(id);
 const won = (n) => '₩' + n.toLocaleString('ko-KR');
@@ -324,7 +325,6 @@ stage.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x0c0f13);
-scene.fog = new THREE.Fog(0x0c0f13, 12, 26);
 
 const camera = new THREE.PerspectiveCamera(50, 1, 0.01, 80);
 
@@ -368,7 +368,27 @@ function makeStudioEnv() {
   panel(12, 12, new THREE.Color(0.25, 0.26, 0.3), 0, -0.2, 0, 0, 5, 0);
   return pmrem.fromScene(sc, 0.03).texture;
 }
-scene.environment = makeStudioEnv();
+scene.environment = makeStudioEnv(); // HDRI 로드 전 폴백
+/* 실사 환경: Poly Haven 'autoshop_01' (CC0) — 배경·반사가 실제 정비소 사진 */
+let envEquirect = null;
+new RGBELoader().load('assets/env_autoshop_2k.hdr.wasm', (tex) => {
+  tex.mapping = THREE.EquirectangularReflectionMapping;
+  envEquirect = tex;
+  scene.environment = pmrem.fromEquirectangular(tex).texture;
+  applyBackdrop();
+});
+function applyBackdrop() {
+  if (photoMode) return;
+  if (envEquirect) {
+    scene.background = envEquirect;
+    scene.backgroundBlurriness = mode === 'int' ? 0.1 : 0;
+    scene.backgroundIntensity = mode === 'int' ? 1.0 : 0.75;
+    cyc.visible = false;
+  } else {
+    scene.background = new THREE.Color(mode === 'int' ? 0x2b323c : 0x0c0f13);
+    cyc.visible = mode === 'ext';
+  }
+}
 
 const hemi = new THREE.HemisphereLight(0xdfe7f0, 0x2c3138, 0.55);
 scene.add(hemi);
@@ -383,7 +403,7 @@ sun.shadow.radius = 6;
 scene.add(sun);
 
 /* ---------- 스튜디오 바닥 (반사) + 배경 사이클로라마 ---------- */
-const floorRefl = new Reflector(new THREE.CircleGeometry(8, 64), {
+const floorRefl = new Reflector(new THREE.CircleGeometry(5, 64), {
   textureWidth: 768, textureHeight: 768, color: 0x7d838c,
 });
 floorRefl.rotation.x = -Math.PI / 2;
@@ -398,7 +418,7 @@ const floorFade = canvasTexOnce(256, (g, s) => {
   g.fillStyle = gr; g.fillRect(0, 0, s, s);
 });
 const floorMatte = new THREE.Mesh(
-  new THREE.CircleGeometry(8.01, 64),
+  new THREE.CircleGeometry(5.01, 64),
   new THREE.MeshBasicMaterial({ map: floorFade, transparent: true, depthWrite: false })
 );
 floorMatte.rotation.x = -Math.PI / 2;
@@ -435,6 +455,50 @@ function canvasTexOnce(size, draw) {
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
   return t;
+}
+
+/* 실사 대시 뷰: 실제 차량 사진(CC BY 2.0, Steve Jurvetson)을 배경으로 3D 상품 오버레이 */
+let photoMode = false;
+const photoTex = new THREE.TextureLoader().load('assets/photo_dash_m3.jpg', (t) => { t.colorSpace = THREE.SRGBColorSpace; });
+const photoPlane = new THREE.Mesh(
+  new THREE.PlaneGeometry(1, 1),
+  new THREE.MeshBasicMaterial({ map: photoTex, depthTest: false, depthWrite: false, toneMapped: false })
+);
+photoPlane.renderOrder = -10;
+photoPlane.visible = false;
+camera.add(photoPlane);
+scene.add(camera);
+const PHOTO_ASPECT = 960 / 663;
+function fitPhotoPlane() {
+  const d = 5;
+  const h = 2 * d * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2);
+  const w = h * camera.aspect;
+  let pw = w, ph = w / PHOTO_ASPECT;
+  if (ph < h) { ph = h; pw = h * PHOTO_ASPECT; }
+  photoPlane.scale.set(pw, ph, 1);
+  photoPlane.position.set(0, 0, -d);
+}
+const PHOTO_CAM = { pos: [-0.9, 1.32, 0.5], tgt: [0.32, 0.3, -0.1], fov: 74 };
+const PHOTO_SHOW = ['dash', 'console'];
+function enterPhotoMode() {
+  photoMode = true;
+  photoPlane.visible = true;
+  scene.background = null;
+  exteriorGroup.visible = false;
+  interiorGroup.visible = false;
+  cabinExtrasGroup.visible = false;
+  floorRefl.visible = false; floorMatte.visible = false; shadowFloor.visible = false; cyc.visible = false;
+  for (const [id, e] of installed) {
+    const p = byId[id];
+    e.root.visible = p.mode === 'int' && PHOTO_SHOW.includes(p.intView);
+  }
+  fitPhotoPlane();
+}
+function exitPhotoMode() {
+  if (!photoMode) return;
+  photoMode = false;
+  photoPlane.visible = false;
+  floorMatte.visible = true; shadowFloor.visible = true;
 }
 
 const exteriorGroup = new THREE.Group();
@@ -1511,11 +1575,12 @@ function install(p, variantId, fly = true) {
   const root = p.build(variantId, car);
   root.userData = { productId: p.id };
   root.visible = p.mode === 'int' ? true : mode === 'ext';
+  if (photoMode) root.visible = p.mode === 'int' && PHOTO_SHOW.includes(p.intView);
   if (p.mode === 'int') applyCabinDelta(root, p.split);
   productsGroup.add(root);
   installed.set(p.id, { root, variant: variantId });
   refreshCards(); refreshCartBadge(); persist();
-  if (fly) {
+  if (fly && !photoMode) {
     if (p.mode === 'int') setView(p.intView || 'overview');
     else flyTo(p.focus);
   }
@@ -1535,12 +1600,21 @@ function totalPrice() {
 
 /* ---------- 카메라 ---------- */
 let flyAnim = null;
+let curBaseFov = 50;
+/* 뷰 fov는 가로 화면 기준 — 세로 화면에서는 가로 화각이 유지되도록 세로 fov를 확장 */
+function fitFov(baseFov) {
+  const a = camera.aspect;
+  if (a >= 1.25) return baseFov;
+  const hf = 2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(baseFov) / 2) * 1.25);
+  return Math.min(THREE.MathUtils.radToDeg(2 * Math.atan(Math.tan(hf / 2) / a)), 100);
+}
 function flyTo(f) {
+  if (f.fov) curBaseFov = f.fov;
   flyAnim = {
     t: 0,
     p0: camera.position.clone(), p1: new THREE.Vector3(...f.pos),
     t0: orbit.target.clone(), t1: new THREE.Vector3(...f.tgt),
-    f0: camera.fov, f1: f.fov || camera.fov,
+    f0: camera.fov, f1: fitFov(f.fov || curBaseFov),
   };
 }
 const EXT_VIEWS = {
@@ -1551,6 +1625,7 @@ const EXT_VIEWS = {
 };
 const INT_VIEW_DEFS = [
   { id: 'overview', label: '전체' },
+  { id: 'photo', label: '실사 대시', glbOnly: true },
   { id: 'dash', label: '대시보드' },
   { id: 'console', label: '콘솔' },
   { id: 'door', label: '도어' },
@@ -1577,6 +1652,20 @@ function intView(name) {
 }
 let curIntView = 'overview';
 function setView(name, fly = true) {
+  if (name === 'photo') {
+    curIntView = name;
+    document.querySelectorAll('#intViewChips .chip').forEach((x) => x.classList.toggle('on', x.id === 'iv_photo'));
+    enterPhotoMode();
+    flyAnim = null;
+    camera.position.set(...PHOTO_CAM.pos);
+    orbit.target.set(...PHOTO_CAM.tgt);
+    curBaseFov = PHOTO_CAM.fov;
+    camera.fov = fitFov(curBaseFov); camera.updateProjectionMatrix();
+    fitPhotoPlane();
+    showHint('실사 사진(모델 3, CC BY: S. Jurvetson) 위에 상품을 겹쳐 봅니다 — 대시·콘솔 상품만 표시', 4000);
+    return;
+  }
+  if (photoMode) { exitPhotoMode(); setMode('int', false); }
   curIntView = name;
   document.querySelectorAll('#intViewChips .chip').forEach((x) => x.classList.toggle('on', x.id === 'iv_' + name));
   const v = intView(name);
@@ -1584,7 +1673,8 @@ function setView(name, fly = true) {
   else {
     flyAnim = null;
     camera.position.set(...v.pos); orbit.target.set(...v.tgt);
-    camera.fov = v.fov || camera.fov; camera.updateProjectionMatrix();
+    if (v.fov) curBaseFov = v.fov;
+    camera.fov = fitFov(curBaseFov); camera.updateProjectionMatrix();
   }
 }
 (function buildIntViewChips() {
@@ -1593,7 +1683,10 @@ function setView(name, fly = true) {
     const b = document.createElement('button');
     b.className = 'chip' + (d.id === 'overview' ? ' on' : '');
     b.id = 'iv_' + d.id; b.textContent = d.label;
-    b.addEventListener('click', () => setView(d.id));
+    b.addEventListener('click', () => {
+      if (d.glbOnly && !car?._prep?.T) { showHint('이 차량에서는 아직 지원되지 않습니다', 2500); return; }
+      setView(d.id);
+    });
     el.appendChild(b);
   }
 })();
@@ -1620,16 +1713,13 @@ function setMode(m, fly = true) {
     orbit.enabled = true;
     orbit.minDistance = 2.2; orbit.maxDistance = 10; orbit.maxPolarAngle = Math.PI * 0.52;
     hemi.intensity = 0.55; sun.intensity = 1.9;
-    scene.background.set(0x0c0f13); scene.fog.color.set(0x0c0f13);
-    scene.fog.near = 12; scene.fog.far = 26;
   } else {
     orbit.enabled = false; // 지정 시점 모드: 궤도 입력·보정 비활성
     orbit.minDistance = 0.01; orbit.maxDistance = 50; orbit.maxPolarAngle = Math.PI;
     hemi.intensity = 2.9; sun.intensity = 2.4;
-    scene.background.set(0x2b323c); scene.fog.color.set(0x2b323c);
-    scene.fog.near = 7; scene.fog.far = 20;
   }
-  cyc.visible = m === 'ext';
+  exitPhotoMode();
+  applyBackdrop();
   scene.environmentIntensity = m === 'int' ? 2.1 : 1.0;
   cabinExtrasGroup.visible = m === 'int' && glbCabin && !splatActive;
   closeOptions();
@@ -2065,7 +2155,9 @@ function resize() {
   renderer.setSize(w, h, false);
   composer.setSize(w, h);
   camera.aspect = w / h;
+  if (!flyAnim) camera.fov = fitFov(curBaseFov);
   camera.updateProjectionMatrix();
+  fitPhotoPlane();
 }
 new ResizeObserver(resize).observe(stage);
 resize();

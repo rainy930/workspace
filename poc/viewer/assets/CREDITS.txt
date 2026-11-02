@@ -11,3 +11,11 @@
    ※ 비상업(NC) 라이선스 — POC 검증 전용, 상업 배포 전 교체 필요
 
 차량명(Tesla, Model Y, Model 3)은 호환 대상 식별 표기이며 제조사와 무관합니다.
+
+3) 환경맵 (assets/env_autoshop_2k.hdr.wasm — HDR, 확장자만 .wasm)
+   "Autoshop 01" HDRI — Poly Haven, CC0 (출처 표기 불필요)
+   https://polyhaven.com/a/autoshop_01
+
+4) 실사 대시 사진 (assets/photo_dash_m3.jpg)
+   "The Model 3 Interior" by Steve Jurvetson — CC BY 2.0
+   https://commons.wikimedia.org/wiki/File:The_Model_3_Interior.jpg
