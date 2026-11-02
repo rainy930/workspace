@@ -19,3 +19,9 @@
 4) 실사 대시 사진 (assets/photo_dash_m3.jpg)
    "The Model 3 Interior" by Steve Jurvetson — CC BY 2.0
    https://commons.wikimedia.org/wiki/File:The_Model_3_Interior.jpg
+
+5) 모델 3 하이랜드 실차 모델 (assets/highland/)
+   "2024 Tesla Model 3" — 임베디드 아티스트 RBLXSupercars (Sketchfab), CC-BY 4.0
+   업로더: brandonleong28 / 재배포 경유: erictfree/Carbon-Footprint-AI-Visualizer,
+   aditano/tesla-studio (상세 체인: assets/highland/CREDITS.md)
+   ※ 기존 CC-BY-NC 모델(OneSteven)을 상업 가능 CC-BY로 교체
