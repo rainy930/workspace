@@ -1,7 +1,7 @@
 <title>실내 장착 미리보기</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>
-  /* 레이아웃: 전체 화면 3D + 하단 상품 드로어(오늘의집 방꾸미기 스타일), 단일 다크 테마 뷰어 */
+  /* 레이아웃: 차량 선택 → 전체 화면 3D(외관/내관) + 하단 상품 드로어, 단일 다크 테마 뷰어 */
   :root {
     --bg: #101317;
     --panel: #181d23;
@@ -11,6 +11,7 @@
     --fg-dim: #9aa6b3;
     --accent: #6fb6c9;
     --accent-ink: #0b1316;
+    --pop: #d9a05b;
     color-scheme: dark;
   }
   html, body { height: 100%; }
@@ -40,6 +41,14 @@
     scrollbar-width: none;
   }
   #topbar::-webkit-scrollbar { display: none; }
+  #modeSeg { display: flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; flex: 0 0 auto; }
+  #modeSeg button {
+    border: none; background: rgba(16,19,23,.85); color: var(--fg-dim); font: inherit;
+    font-size: 12.5px; padding: 7px 14px; cursor: pointer;
+  }
+  #modeSeg button.on { background: var(--accent); color: var(--accent-ink); font-weight: 700; }
+  .chipSet { display: flex; gap: 6px; }
+
   #fps {
     position: absolute; right: max(16px, env(safe-area-inset-right, 0px)); bottom: 8px; z-index: 4;
     font-size: 10px; color: var(--fg-dim); font-variant-numeric: tabular-nums;
@@ -76,7 +85,7 @@
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
   #drawerHead { display: flex; align-items: center; gap: 8px; padding-block: 10px 2px; }
-  #drawerTitle { font-size: 13px; font-weight: 700; }
+  #drawerTitle { font-size: 12.5px; color: var(--fg-dim); }
   #drawerMeta { margin-left: auto; font-size: 12px; color: var(--fg-dim); font-variant-numeric: tabular-nums; }
   #cats { display: flex; gap: 6px; overflow-x: auto; padding-block: 8px; scrollbar-width: none; }
   #cats::-webkit-scrollbar { display: none; }
@@ -99,22 +108,26 @@
     position: absolute; top: 6px; left: 6px; background: var(--accent); color: var(--accent-ink);
     font-size: 10px; font-weight: 700; border-radius: 6px; padding: 2px 6px;
   }
+  .pop-tag {
+    display: inline-block; background: rgba(217,160,91,.18); color: var(--pop);
+    border-radius: 5px; font-size: 10px; font-weight: 700; padding: 1px 5px; margin-right: 4px;
+    vertical-align: 1px;
+  }
   #disclaim { font-size: 10.5px; color: var(--fg-dim); padding-bottom: 8px; margin: 0; }
 
   /* ---- 옵션 시트 ---- */
   #optSheet { padding-block: 12px 14px; display: flex; flex-direction: column; gap: 12px; }
-  #optHead { display: flex; align-items: center; gap: 10px; }
+  #optHead { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
   #optName { font-size: 14px; font-weight: 700; }
   #optPrice { font-size: 12.5px; color: var(--fg-dim); font-variant-numeric: tabular-nums; }
+  #optFit { font-size: 11px; color: var(--fg-dim); }
   #optSw { display: flex; gap: 10px; flex-wrap: wrap; }
   .sw {
     display: flex; flex-direction: column; align-items: center; gap: 5px;
     background: none; border: none; color: var(--fg-dim); font: inherit; font-size: 11px; cursor: pointer;
     padding: 0;
   }
-  .sw .dot {
-    width: 36px; height: 36px; border-radius: 50%; border: 2px solid var(--line); box-sizing: border-box;
-  }
+  .sw .dot { width: 36px; height: 36px; border-radius: 50%; border: 2px solid var(--line); box-sizing: border-box; }
   .sw.on { color: var(--fg); }
   .sw.on .dot { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(111,182,201,.35); }
   #optActions { display: flex; gap: 8px; }
@@ -124,7 +137,7 @@
   }
   #optActions .done { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 700; }
 
-  /* ---- 목록/스크린샷 모달 ---- */
+  /* ---- 모달 공통 ---- */
   .modal {
     position: fixed; inset: 0; z-index: 20; background: rgba(0,0,0,.72);
     display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
@@ -147,26 +160,60 @@
   .cartRow .rx { background: none; border: none; color: var(--fg-dim); font-size: 15px; cursor: pointer; padding: 4px; }
   #cartTotal { display: flex; font-size: 13.5px; font-weight: 700; padding-inline: 2px; }
   #cartTotal span:last-child { margin-left: auto; font-variant-numeric: tabular-nums; }
-  .sheet .btnRow { display: flex; gap: 8px; }
-  .sheet .btnRow button {
+  .btnRow { display: flex; gap: 8px; }
+  .btnRow button {
     flex: 1; border-radius: 10px; border: 1px solid var(--line); background: var(--panel-2);
     color: var(--fg); font: inherit; font-size: 13px; padding: 11px; cursor: pointer;
   }
-  .sheet .btnRow .primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 700; }
+  .btnRow .primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 700; }
   #shotModal { justify-content: center; gap: 10px; padding: max(16px, env(safe-area-inset-left, 0px)); }
   #shotModal img { max-width: 92%; max-height: 68%; border-radius: 10px; border: 1px solid var(--line); }
   #shotModal p { color: var(--fg-dim); font-size: 12px; margin: 0; }
   .empty { color: var(--fg-dim); font-size: 13px; text-align: center; padding-block: 18px; }
+
+  /* ---- 차량 선택 ---- */
+  #carSelect {
+    position: fixed; inset: 0; z-index: 30; background: var(--bg);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  #carSelect h1 { font-size: 19px; margin: 0; }
+  #carSelect .sub { color: var(--fg-dim); font-size: 13px; margin: -8px 0 0; }
+  #carList { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; max-width: 560px; }
+  .carCard {
+    width: 150px; background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
+    padding: 10px; cursor: pointer; font: inherit; color: var(--fg); text-align: left;
+  }
+  .carCard:active { border-color: var(--accent); }
+  .carCard img { width: 130px; height: 86px; object-fit: cover; border-radius: 9px; background: #11151a; display: block; }
+  .carCard .cn { font-size: 13.5px; font-weight: 700; margin-top: 8px; }
+  .carCard .cy { font-size: 11.5px; color: var(--fg-dim); }
+  #carNote { font-size: 10.5px; color: var(--fg-dim); max-width: 480px; text-align: center; line-height: 1.6; margin: 0; }
 </style>
 
 <div id="app">
   <div id="stage">
     <div id="topbar">
-      <button class="chip on" data-view="overview" id="v0">전체</button>
-      <button class="chip" data-view="driver">운전석</button>
-      <button class="chip" data-view="passenger">조수석</button>
-      <button class="chip" data-view="rear">2열</button>
-      <button class="chip" id="themeBtn">내장: 블랙</button>
+      <button class="chip" id="carChange">차량 변경</button>
+      <div id="modeSeg">
+        <button id="modeExt" class="on">외관</button>
+        <button id="modeInt">내관</button>
+      </div>
+      <span class="chipSet" id="extChips">
+        <button class="chip on" data-eview="overview">전체</button>
+        <button class="chip" data-eview="front">전면</button>
+        <button class="chip" data-eview="rear">후면</button>
+        <button class="chip" data-eview="side">측면</button>
+        <button class="chip" id="paintBtn">차량 색상</button>
+      </span>
+      <span class="chipSet" id="intChips" hidden>
+        <button class="chip on" data-iview="overview">전체</button>
+        <button class="chip" data-iview="driver">운전석</button>
+        <button class="chip" data-iview="passenger">조수석</button>
+        <button class="chip" data-iview="rear">2열</button>
+        <button class="chip" id="themeBtn">내장: 블랙</button>
+      </span>
     </div>
     <div id="hint" hidden></div>
     <div id="fab">
@@ -179,17 +226,18 @@
   <div id="drawer">
     <div id="main">
       <div id="drawerHead">
-        <span id="drawerTitle">상품을 선택하면 바로 장착됩니다</span>
+        <span id="drawerTitle"></span>
         <span id="drawerMeta"></span>
       </div>
       <div id="cats"></div>
       <div id="cards"></div>
-      <p id="disclaim">상품·가격은 POC용 예시 데이터입니다.</p>
+      <p id="disclaim">상품·가격은 POC용 예시 데이터이며, 호환 표시는 데모입니다.</p>
     </div>
     <div id="optSheet" hidden>
       <div id="optHead">
         <span id="optName"></span>
         <span id="optPrice"></span>
+        <span id="optFit"></span>
       </div>
       <div id="optSw"></div>
       <div id="optActions">
@@ -201,10 +249,11 @@
 
   <div id="cartModal" class="modal" hidden>
     <div class="sheet">
-      <h2>장착한 상품</h2>
+      <h2 id="cartTitle">장착한 상품</h2>
       <div id="cartRows"></div>
       <div id="cartTotal"><span>합계 (예시)</span><span id="cartSum">₩0</span></div>
       <div class="btnRow">
+        <button id="copyList">목록 복사</button>
         <button id="clearAll">전체 비우기</button>
         <button class="primary" id="cartClose">닫기</button>
       </div>
@@ -215,6 +264,13 @@
     <img id="shotImg" alt="장면 스크린샷">
     <p>이미지를 길게 눌러(또는 우클릭) 저장하세요.</p>
     <button class="chip" id="shotClose">닫기</button>
+  </div>
+
+  <div id="carSelect" hidden>
+    <h1>어떤 차를 꾸밀까요?</h1>
+    <p class="sub">차종을 선택하면 호환 상품만 보여드립니다</p>
+    <div id="carList"></div>
+    <p id="carNote">차량명은 호환 대상 표기이며 제조사와 무관한 독립 시뮬레이터입니다.<br>차량 형상은 근사 모델(플레이스홀더)입니다.</p>
   </div>
 </div>
 
@@ -247,15 +303,13 @@ stage.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x14181e);
-scene.fog = new THREE.Fog(0x14181e, 6, 14);
+scene.fog = new THREE.Fog(0x14181e, 9, 22);
 
-const camera = new THREE.PerspectiveCamera(58, 1, 0.01, 60);
+const camera = new THREE.PerspectiveCamera(55, 1, 0.01, 80);
 
 const orbit = new OrbitControls(camera, renderer.domElement);
 orbit.enableDamping = true;
 orbit.dampingFactor = 0.12;
-orbit.minDistance = 0.25;
-orbit.maxDistance = 6;
 orbit.maxPolarAngle = Math.PI * 0.55;
 
 const pmrem = new THREE.PMREMGenerator(renderer);
@@ -264,25 +318,31 @@ scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
 const hemi = new THREE.HemisphereLight(0xe8eef5, 0x3b4048, 1.0);
 scene.add(hemi);
 const sun = new THREE.DirectionalLight(0xfff4e4, 2.2);
-sun.position.set(2.5, 4.5, 2.5);
+sun.position.set(3.2, 5.5, 3.2);
 sun.castShadow = true;
-sun.shadow.mapSize.set(1024, 1024);
-sun.shadow.camera.left = -2.5; sun.shadow.camera.right = 2.5;
-sun.shadow.camera.top = 2.5; sun.shadow.camera.bottom = -2.5;
+sun.shadow.mapSize.set(2048, 2048);
+sun.shadow.camera.left = -4; sun.shadow.camera.right = 4;
+sun.shadow.camera.top = 4; sun.shadow.camera.bottom = -4;
 sun.shadow.bias = -0.0005;
 scene.add(sun);
 
-/* 바닥 */
 const ground = new THREE.Mesh(
-  new THREE.CircleGeometry(7, 48).rotateX(-Math.PI / 2),
+  new THREE.CircleGeometry(12, 56).rotateX(-Math.PI / 2),
   new THREE.MeshStandardMaterial({ color: 0x0e1115, roughness: 0.95 })
 );
-ground.position.y = -0.05;
+ground.position.y = -0.051;
 ground.receiveShadow = true;
 scene.add(ground);
 
+const exteriorGroup = new THREE.Group();
+const interiorGroup = new THREE.Group();
 const productsGroup = new THREE.Group();
-scene.add(productsGroup);
+scene.add(exteriorGroup, interiorGroup, productsGroup);
+
+function disposeGroup(g) {
+  g.traverse((o) => { o.geometry?.dispose?.(); });
+  g.clear();
+}
 
 /* ---------- 절차적 텍스처 / 재질 ---------- */
 function canvasTex(size, draw, repeat = 1) {
@@ -333,17 +393,152 @@ const MAT = {
   wood: () => new THREE.MeshStandardMaterial({ map: woodTex, roughness: 0.45 }),
   white: () => new THREE.MeshPhysicalMaterial({ color: 0xf2f2ee, roughness: 0.12, clearcoat: 1, clearcoatRoughness: 0.08 }),
   black: () => new THREE.MeshStandardMaterial({ color: 0x1c1d21, roughness: 0.85 }),
+  red: () => new THREE.MeshPhysicalMaterial({ color: 0x8e1626, roughness: 0.3, clearcoat: 1 }),
+  silver: () => new THREE.MeshStandardMaterial({ color: 0xaeb3b9, roughness: 0.35, metalness: 0.7 }),
 };
+function glowMat(hex) {
+  return new THREE.MeshStandardMaterial({ color: 0x070707, emissive: hex, emissiveIntensity: 3.2 });
+}
 
-/* ---------- 샘플 실내 (내장: 모델Y 스타일 플레이스홀더, z−: 전방) ---------- */
-const themeable = []; // 내장색(블랙/화이트) 전환 대상 재질
-function themedMat(blackHex, whiteHex, opts = {}) {
-  const m = new THREE.MeshStandardMaterial({ color: blackHex, roughness: 0.7, ...opts });
+/* ---------- 차량 정의 ---------- */
+const PAINTS = [
+  { id: '#3b3d42', label: '스텔스 그레이' },
+  { id: '#e8e9ea', label: '펄 화이트' },
+  { id: '#101114', label: '솔리드 블랙' },
+  { id: '#8e1626', label: '울트라 레드' },
+  { id: '#1f3a5f', label: '딥 블루' },
+  { id: '#a8abb0', label: '퀵실버' },
+];
+const CARS = [
+  { id: 'juniper', label: '모델 Y 주니퍼', sub: '2025~ · SUV', type: 'suv', width: 1.84, rearDisplay: true, defPaint: '#3b3d42' },
+  { id: 'legacyY', label: '모델 Y 레거시', sub: '2020~2024 · SUV', type: 'suv', width: 1.84, rearDisplay: false, defPaint: '#e8e9ea' },
+  { id: 'highland', label: '모델 3 하이랜드', sub: '2024~ · 세단', type: 'sedan', width: 1.78, rearDisplay: true, defPaint: '#8e1626' },
+];
+const carById = Object.fromEntries(CARS.map((c) => [c.id, c]));
+const FIT_LABEL = { juniper: '모델 Y 주니퍼', legacyY: '모델 Y 레거시', highland: '모델 3 하이랜드' };
+
+/* ---------- 외관 (절차 생성 차체) ---------- */
+let paintMat = null;       // 현재 차 도장 재질
+let wheelCapMats = [];     // 기본 휠 캡 (제품으로 덮어씀)
+
+function bodyShape(type) {
+  const s = new THREE.Shape();
+  /* 차체는 벨트라인까지. 그 위는 글라스 캐노피가 덮는다 (베벨 확장으로 글라스가 묻히지 않게) */
+  if (type === 'suv') {
+    s.moveTo(-2.2, 0.36);
+    s.quadraticCurveTo(-2.26, 0.62, -2.05, 0.72);
+    s.quadraticCurveTo(-1.45, 0.9, -0.85, 0.96);
+    s.quadraticCurveTo(0.6, 1.04, 2.05, 1.02);
+    s.quadraticCurveTo(2.42, 1.0, 2.46, 0.94);
+    s.quadraticCurveTo(2.56, 0.74, 2.5, 0.52);
+    s.lineTo(2.5, 0.36);
+  } else {
+    s.moveTo(-2.2, 0.34);
+    s.quadraticCurveTo(-2.26, 0.58, -2.02, 0.66);
+    s.quadraticCurveTo(-1.35, 0.8, -0.8, 0.86);
+    s.quadraticCurveTo(0.5, 0.94, 1.85, 0.92);
+    s.lineTo(2.32, 0.9);
+    s.quadraticCurveTo(2.46, 0.86, 2.46, 0.7);
+    s.lineTo(2.46, 0.34);
+  }
+  const yb = type === 'suv' ? 0.36 : 0.34;
+  s.lineTo(2.06, yb);
+  s.absarc(1.6, yb, 0.46, 0, Math.PI, false);
+  s.lineTo(-0.84, yb);
+  s.absarc(-1.3, yb, 0.46, 0, Math.PI, false);
+  s.lineTo(-2.2, yb);
+  return s;
+}
+function glassShape(type) {
+  const s = new THREE.Shape();
+  if (type === 'suv') {
+    s.moveTo(-0.85, 0.97);
+    s.quadraticCurveTo(-0.45, 1.5, 0.1, 1.58);
+    s.quadraticCurveTo(0.75, 1.6, 1.25, 1.48);
+    s.quadraticCurveTo(1.9, 1.26, 2.3, 1.03);
+    s.lineTo(2.3, 0.97);
+  } else {
+    s.moveTo(-0.8, 0.88);
+    s.quadraticCurveTo(-0.42, 1.36, 0.15, 1.43);
+    s.quadraticCurveTo(0.78, 1.45, 1.22, 1.32);
+    s.quadraticCurveTo(1.6, 1.12, 1.88, 0.94);
+    s.lineTo(1.88, 0.88);
+  }
+  return s;
+}
+function extrudeCentered(shape, depth, bevel) {
+  const g = new THREE.ExtrudeGeometry(shape, {
+    depth, bevelEnabled: true, bevelThickness: bevel, bevelSize: bevel, bevelSegments: 5, steps: 1,
+  });
+  g.translate(0, 0, -depth / 2);
+  g.rotateY(-Math.PI / 2); // shape.x(차 길이) → world z (전방 −z 유지)
+  return g;
+}
+function buildExterior(car, paintHex) {
+  const g = new THREE.Group();
+  paintMat = new THREE.MeshPhysicalMaterial({
+    color: paintHex, roughness: 0.32, metalness: 0.1, clearcoat: 1, clearcoatRoughness: 0.06,
+  });
+  const body = new THREE.Mesh(extrudeCentered(bodyShape(car.type), car.width - 0.36, 0.18), paintMat);
+  body.castShadow = true; body.receiveShadow = true;
+  g.add(body);
+
+  const glass = new THREE.Mesh(
+    extrudeCentered(glassShape(car.type), car.width - 0.72, 0.06),
+    new THREE.MeshPhysicalMaterial({ color: 0x0b1016, roughness: 0.08, metalness: 0.4, clearcoat: 1 })
+  );
+  glass.castShadow = true;
+  g.add(glass);
+
+  // 바퀴 (타이어 + 캡)
+  wheelCapMats = [];
+  const tire = new THREE.MeshStandardMaterial({ color: 0x141518, roughness: 0.92 });
+  for (const z of [-1.3, 1.6]) for (const x of [-1, 1]) {
+    const w = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 0.24, 28).rotateZ(Math.PI / 2), tire);
+    w.position.set(x * (car.width / 2 - 0.1), 0.31, z);
+    w.castShadow = true;
+    g.add(w);
+    const capM = new THREE.MeshStandardMaterial({ color: 0x3a3e44, roughness: 0.5, metalness: 0.5 });
+    wheelCapMats.push(capM);
+    const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.25, 24).rotateZ(Math.PI / 2), capM);
+    cap.position.copy(w.position);
+    g.add(cap);
+  }
+
+  // 라이트 (전면 슬림 2 + 후면 라이트바)
+  const hl = new THREE.MeshStandardMaterial({ color: 0x9aa, emissive: 0xcfe8ff, emissiveIntensity: 1.6 });
+  for (const x of [-0.52, 0.52]) {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.035, 0.06), hl);
+    m.position.set(x, car.type === 'suv' ? 0.75 : 0.68, -2.34);
+    g.add(m);
+  }
+  const rl = new THREE.Mesh(
+    new THREE.BoxGeometry(car.width - 0.55, 0.045, 0.05),
+    new THREE.MeshStandardMaterial({ color: 0x400, emissive: 0xff2a2a, emissiveIntensity: 2 })
+  );
+  rl.position.set(0, car.type === 'suv' ? 1.0 : 0.82, car.type === 'suv' ? 2.62 : 2.58);
+  g.add(rl);
+
+  // 미러
+  for (const x of [-1, 1]) {
+    const m = new THREE.Mesh(new RoundedBoxGeometry(0.07, 0.07, 0.15, 2, 0.02), paintMat);
+    m.position.set(x * (car.width / 2 - 0.12), 1.04, -0.5);
+    m.castShadow = true;
+    g.add(m);
+  }
+  return g;
+}
+
+/* ---------- 내관 (샘플 실내, z−: 전방) ---------- */
+let themeable = [];
+function themedMat(blackHex, whiteHex) {
+  const m = new THREE.MeshStandardMaterial({ color: blackHex, roughness: 0.7 });
   m.userData = { blackHex, whiteHex };
   themeable.push(m);
   return m;
 }
-function buildInterior() {
+function buildInterior(car) {
+  themeable = [];
   const g = new THREE.Group();
   const dash = new THREE.MeshStandardMaterial({ color: 0x24262b, roughness: 0.8 });
   const carpet = new THREE.MeshStandardMaterial({ color: 0x141518, roughness: 0.95 });
@@ -354,37 +549,36 @@ function buildInterior() {
     m.position.set(x, y, z); m.castShadow = true; m.receiveShadow = true;
     g.add(m); return m;
   };
-  // 바닥 / 대시보드
   add(new THREE.BoxGeometry(1.6, 0.04, 2.7), carpet, 0, -0.02, 0.35);
   add(new RoundedBoxGeometry(1.56, 0.3, 0.42, 3, 0.05), dash, 0, 0.72, -0.95);
   add(new RoundedBoxGeometry(1.56, 0.1, 0.55, 3, 0.04), dash, 0, 0.53, -0.9);
-  // 센터 디스플레이 (15.4", 391mm 대각 ≈ 340×194mm 실측)
   const screen = add(new RoundedBoxGeometry(0.34, 0.194, 0.012, 2, 0.006),
     new THREE.MeshPhysicalMaterial({ color: 0x05070c, roughness: 0.08, clearcoat: 1 }), 0, 0.72, -0.72);
   screen.rotation.x = -0.12;
-  // 스티어링
   const wheel = add(new THREE.TorusGeometry(0.17, 0.021, 14, 48),
     new THREE.MeshStandardMaterial({ color: 0x17181c, roughness: 0.9 }), -0.38, 0.72, -0.62);
   wheel.rotation.x = -1.25;
-  // 센터 콘솔 + 컵홀더 홈
   add(new RoundedBoxGeometry(0.26, 0.2, 0.95, 3, 0.03), dash, 0, 0.33, -0.1);
   const hole = new THREE.MeshStandardMaterial({ color: 0x0c0c0f, roughness: 0.9 });
   for (const dz of [-0.33, -0.22]) add(new THREE.CylinderGeometry(0.038, 0.036, 0.02, 24), hole, 0, 0.43, dz);
-  // 앞좌석
   for (const x of [-0.38, 0.38]) {
     add(new RoundedBoxGeometry(0.48, 0.14, 0.52, 3, 0.05), seat, x, 0.42, 0.28);
     add(new RoundedBoxGeometry(0.48, 0.62, 0.13, 3, 0.05), seat, x, 0.78, 0.55).rotation.x = 0.17;
     add(new RoundedBoxGeometry(0.24, 0.16, 0.09, 3, 0.03), seat, x, 1.17, 0.62);
   }
-  // 2열
   add(new RoundedBoxGeometry(1.35, 0.15, 0.5, 3, 0.05), seat, 0, 0.4, 1.35);
   add(new RoundedBoxGeometry(1.35, 0.6, 0.14, 3, 0.05), seat, 0, 0.76, 1.63).rotation.x = 0.2;
-  // 도어 패널 + 인서트 + 암레스트
   for (const x of [-0.8, 0.8]) {
     add(new RoundedBoxGeometry(0.06, 0.62, 1.15, 3, 0.02), dash, x, 0.5, -0.2);
     add(new RoundedBoxGeometry(0.05, 0.22, 1.0, 3, 0.02), insert, x * 0.99, 0.64, -0.2);
     add(new RoundedBoxGeometry(0.09, 0.05, 0.6, 3, 0.02), dash, x * 0.93, 0.56, -0.15);
     add(new RoundedBoxGeometry(0.06, 0.55, 1.0, 3, 0.02), dash, x, 0.48, 1.15);
+  }
+  // 후석 디스플레이 (주니퍼·하이랜드): 8인치 ≈ 177×100mm
+  if (car.rearDisplay) {
+    const rd = add(new RoundedBoxGeometry(0.177, 0.1, 0.012, 2, 0.004),
+      new THREE.MeshPhysicalMaterial({ color: 0x05070c, roughness: 0.08, clearcoat: 1 }), 0, 0.5, 0.382);
+    rd.rotation.x = 0.12;
   }
   // 글라스 루프
   const glass = add(new RoundedBoxGeometry(1.5, 0.02, 2.4, 2, 0.01),
@@ -392,136 +586,128 @@ function buildInterior() {
   glass.castShadow = false;
   return g;
 }
-scene.add(buildInterior());
-applyTheme('black');
-
 function applyTheme(t) {
   for (const m of themeable) m.color.set(t === 'white' ? m.userData.whiteHex : m.userData.blackHex);
 }
-let theme = 'black';
-$('themeBtn').addEventListener('click', () => {
-  theme = theme === 'black' ? 'white' : 'black';
-  applyTheme(theme);
-  $('themeBtn').textContent = '내장: ' + (theme === 'black' ? '블랙' : '화이트');
-  persist();
-});
 
-/* ---------- 상품 카탈로그 (전부 절차 생성 3D, 고정 장착 위치) ---------- */
-const glowMats = [];
-function glowMat(hex) {
-  const m = new THREE.MeshStandardMaterial({ color: 0x070707, emissive: hex, emissiveIntensity: 3.2 });
-  glowMats.push(m);
-  return m;
-}
-const SW = { // 스와치 표현
+/* ---------- 상품 카탈로그 ---------- */
+/* 절차 생성 3D + 고정 장착 좌표. fit: 호환 차종 (주니퍼·하이랜드는 콘솔/대시 플랫폼 공유,
+   레거시 용품과는 비호환 사례가 많다는 리서치를 호환 데모에 반영) */
+const SW = {
   carbon: 'repeating-linear-gradient(45deg,#2c2c33 0 4px,#0c0c0e 4px 8px)',
   wood: 'linear-gradient(180deg,#7a5635,#6a4a2c)',
   white: '#eceae4', black: '#232529', beige: '#8d7f6a',
+  red: '#8e1626', silver: '#aeb3b9',
 };
-const trimVariants = [
+const trimV = [
   { id: 'carbon', label: '카본', sw: SW.carbon },
   { id: 'wood', label: '우드', sw: SW.wood },
   { id: 'white', label: '화이트', sw: SW.white },
 ];
-const lightVariants = [
+const lightV = [
   { id: '#7fd4ff', label: '아이스블루', sw: '#7fd4ff' },
   { id: '#fff3e0', label: '웜화이트', sw: '#fff3e0' },
   { id: '#b388ff', label: '퍼플', sw: '#b388ff' },
   { id: '#ff5252', label: '레드', sw: '#ff5252' },
 ];
+const matV = [
+  { id: 'black', label: '블랙', sw: SW.black },
+  { id: 'beige', label: '베이지', sw: SW.beige },
+];
+const ALL = ['juniper', 'legacyY', 'highland'];
 function strip(mat, w, h, d, x, y, z, rx = 0) {
   const m = new THREE.Mesh(new RoundedBoxGeometry(w, h, d, 2, Math.min(h, d) * 0.3), mat);
   m.position.set(x, y, z); m.rotation.x = rx; m.castShadow = true;
   return m;
 }
+function ribMat(v) {
+  return new THREE.MeshStandardMaterial({ map: v === 'beige' ? ribBeige : ribBlack, roughness: 0.95 });
+}
 
-const CATEGORIES = [
+const INT_CATEGORIES = [
   { id: 'all', label: '전체' },
   { id: 'trim', label: '트림·데코' },
   { id: 'light', label: '조명' },
-  { id: 'console', label: '콘솔' },
-  { id: 'mount', label: '거치대' },
-  { id: 'mat', label: '매트' },
+  { id: 'console', label: '콘솔·수납' },
+  { id: 'protect', label: '매트·보호' },
+  { id: 'film', label: '필름·차양' },
 ];
 
 const PRODUCTS = [
+  /* ----- 트림·데코 ----- */
   {
-    id: 'dashTrim', cat: 'trim', name: '대시보드 트림', price: 39000,
-    variants: trimVariants, def: 'carbon',
+    id: 'dashTrim', mode: 'int', cat: 'trim', name: '대시보드 트림', price: 39000,
+    fit: ALL, variants: trimV, def: 'carbon',
     focus: { pos: [0, 1.0, 0.15], tgt: [0, 0.74, -0.85] },
-    build(v) {
-      const g = new THREE.Group();
-      g.add(strip(MAT[v](), 1.2, 0.045, 0.014, 0, 0.8, -0.742, -0.08));
-      return g;
-    },
+    build(v) { const g = new THREE.Group(); g.add(strip(MAT[v](), 1.2, 0.045, 0.014, 0, 0.8, -0.742, -0.08)); return g; },
   },
   {
-    id: 'doorTrim', cat: 'trim', name: '도어 트림 2P', price: 29000,
-    variants: trimVariants, def: 'carbon',
+    id: 'doorTrim', mode: 'int', cat: 'trim', name: '도어 트림 2P', price: 29000,
+    fit: ALL, variants: trimV, def: 'carbon',
     focus: { pos: [0.15, 0.95, 0.5], tgt: [-0.78, 0.6, -0.2] },
     build(v) {
       const g = new THREE.Group();
-      for (const x of [-0.765, 0.765]) {
-        const s = strip(MAT[v](), 0.014, 0.05, 0.7, x, 0.66, -0.2);
-        g.add(s);
-      }
+      for (const x of [-0.765, 0.765]) g.add(strip(MAT[v](), 0.014, 0.05, 0.7, x, 0.66, -0.2));
       return g;
     },
+    thumbBuild() { return strip(MAT.carbon(), 0.05, 0.05, 0.7, 0, 0, 0); },
   },
   {
-    id: 'wheelCover', cat: 'trim', name: '스티어링 휠 커버', price: 27000,
-    variants: [trimVariants[0], trimVariants[1]], def: 'carbon',
+    id: 'steerCover', mode: 'int', cat: 'trim', name: '스티어링 커버', price: 27000,
+    fit: ALL, variants: [trimV[0], trimV[1]], def: 'carbon',
     focus: { pos: [-0.38, 0.95, 0.1], tgt: [-0.38, 0.72, -0.62] },
     build(v) {
       const g = new THREE.Group();
       const t = new THREE.Mesh(new THREE.TorusGeometry(0.17, 0.027, 14, 48), MAT[v]());
       t.position.set(-0.38, 0.72, -0.62); t.rotation.x = -1.25; t.castShadow = true;
-      g.add(t);
-      return g;
+      g.add(t); return g;
     },
   },
+  /* ----- 조명 ----- */
   {
-    id: 'ambient', cat: 'light', name: '엠비언트 라이트 세트', price: 25000,
-    variants: lightVariants, def: '#7fd4ff',
+    id: 'ambient', mode: 'int', cat: 'light', name: '엠비언트 확장 키트', price: 25000,
+    fit: ALL, variants: lightV, def: '#7fd4ff',
     focus: { pos: [0, 0.9, 0.35], tgt: [0, 0.66, -0.75] },
     build(v) {
       const g = new THREE.Group();
       const m = glowMat(v);
       const line = (w, x, y, z, ry = 0) => {
         const s = new THREE.Mesh(new THREE.BoxGeometry(w, 0.006, 0.008), m);
-        s.position.set(x, y, z); s.rotation.y = ry;
-        g.add(s);
+        s.position.set(x, y, z); s.rotation.y = ry; g.add(s);
       };
-      line(1.3, 0, 0.665, -0.73);          // 대시 하단
-      line(0.7, -0.762, 0.6, -0.2, Math.PI / 2); // 도어 좌
-      line(0.7, 0.762, 0.6, -0.2, Math.PI / 2);  // 도어 우
+      line(1.3, 0, 0.665, -0.73);
+      line(0.7, -0.762, 0.6, -0.2, Math.PI / 2);
+      line(0.7, 0.762, 0.6, -0.2, Math.PI / 2);
       return g;
+    },
+    thumbBuild() {
+      const s = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.012, 0.016), glowMat('#7fd4ff'));
+      return s;
     },
   },
   {
-    id: 'footwell', cat: 'light', name: '풋웰 라이트', price: 15000,
-    variants: lightVariants, def: '#7fd4ff',
+    id: 'footwell', mode: 'int', cat: 'light', name: '풋웰 라이트', price: 15000,
+    fit: ALL, variants: lightV, def: '#7fd4ff',
     focus: { pos: [0, 0.75, 0.3], tgt: [0, 0.1, -0.55] },
     build(v) {
       const g = new THREE.Group();
       const m = glowMat(v);
       for (const x of [-0.38, 0.38]) {
         const p = new THREE.Mesh(new THREE.CircleGeometry(0.05, 24), m);
-        p.position.set(x, 0.015, -0.5); p.rotation.x = -Math.PI / 2;
-        g.add(p);
+        p.position.set(x, 0.015, -0.5); p.rotation.x = -Math.PI / 2; g.add(p);
       }
       return g;
     },
+    thumbBuild() { return new THREE.Mesh(new THREE.CircleGeometry(0.06, 24), glowMat('#7fd4ff')); },
   },
+  /* ----- 콘솔·수납 (주니퍼·하이랜드 공용 플랫폼) ----- */
   {
-    id: 'cupTray', cat: 'console', name: '컵홀더 트레이', price: 12000,
-    variants: [{ id: 'black', label: '블랙', sw: SW.black }, { id: 'carbon', label: '카본', sw: SW.carbon }],
-    def: 'black',
+    id: 'cupTray', mode: 'int', cat: 'console', name: '컵홀더 트레이', price: 12000,
+    fit: ['juniper', 'highland'], variants: [{ id: 'black', label: '블랙', sw: SW.black }, { id: 'carbon', label: '카본', sw: SW.carbon }], def: 'black',
     focus: { pos: [0.25, 0.85, 0.25], tgt: [0, 0.43, -0.28] },
     build(v) {
       const g = new THREE.Group();
-      const base = strip(MAT[v](), 0.24, 0.028, 0.26, 0, 0.445, -0.275);
-      g.add(base);
+      g.add(strip(MAT[v](), 0.24, 0.028, 0.26, 0, 0.445, -0.275));
       const hole = new THREE.MeshStandardMaterial({ color: 0x0b0b0d, roughness: 0.9 });
       for (const dz of [-0.33, -0.22]) {
         const h = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.038, 0.024, 26), hole);
@@ -531,26 +717,49 @@ const PRODUCTS = [
     },
   },
   {
-    id: 'organizer', cat: 'console', name: '콘솔 오거나이저', price: 18000,
-    variants: [{ id: 'black', label: '블랙', sw: SW.black }, { id: 'white', label: '화이트', sw: SW.white }],
-    def: 'black',
+    id: 'organizer', mode: 'int', cat: 'console', name: '콘솔 오거나이저', price: 18000, popular: true,
+    fit: ['juniper', 'highland'], variants: [{ id: 'black', label: '블랙', sw: SW.black }, { id: 'white', label: '화이트', sw: SW.white }], def: 'black',
     focus: { pos: [0.3, 0.9, 0.5], tgt: [0, 0.43, 0.1] },
     build(v) {
       const g = new THREE.Group();
       const m = MAT[v]();
-      g.add(strip(m, 0.2, 0.012, 0.3, 0, 0.436, 0.1));           // 바닥
-      g.add(strip(m, 0.2, 0.05, 0.012, 0, 0.455, -0.045));       // 벽 4면
+      g.add(strip(m, 0.2, 0.012, 0.3, 0, 0.436, 0.1));
+      g.add(strip(m, 0.2, 0.05, 0.012, 0, 0.455, -0.045));
       g.add(strip(m, 0.2, 0.05, 0.012, 0, 0.455, 0.245));
       g.add(strip(m, 0.012, 0.05, 0.3, -0.095, 0.455, 0.1));
       g.add(strip(m, 0.012, 0.05, 0.3, 0.095, 0.455, 0.1));
-      g.add(strip(m, 0.18, 0.04, 0.01, 0, 0.45, 0.1));           // 칸막이
+      g.add(strip(m, 0.18, 0.04, 0.01, 0, 0.45, 0.1));
       return g;
     },
   },
   {
-    id: 'phoneMount', cat: 'mount', name: '폰 거치대', price: 22000,
-    variants: [{ id: 'L', label: '좌측 장착', sw: SW.black }, { id: 'R', label: '우측 장착', sw: SW.black }],
-    def: 'L',
+    id: 'doorPocket', mode: 'int', cat: 'console', name: '도어 포켓 수납함 2P', price: 14000, popular: true,
+    fit: ['juniper', 'highland'], variants: [{ id: 'black', label: '블랙 TPE', sw: SW.black }], def: 'black',
+    focus: { pos: [0.1, 0.8, 0.45], tgt: [-0.75, 0.4, -0.2] },
+    build(v) {
+      const g = new THREE.Group();
+      const m = MAT[v]();
+      for (const x of [-0.74, 0.74]) {
+        g.add(strip(m, 0.045, 0.012, 0.34, x, 0.33, -0.2));
+        g.add(strip(m, 0.045, 0.06, 0.012, x, 0.36, -0.37));
+        g.add(strip(m, 0.045, 0.06, 0.012, x, 0.36, -0.03));
+        g.add(strip(m, 0.012, 0.06, 0.34, x + (x < 0 ? 0.02 : -0.02), 0.36, -0.2));
+      }
+      return g;
+    },
+    thumbBuild() {
+      const g = new THREE.Group();
+      const m = MAT.black();
+      g.add(strip(m, 0.045, 0.012, 0.34, 0, 0, 0));
+      g.add(strip(m, 0.045, 0.06, 0.012, 0, 0.03, -0.17));
+      g.add(strip(m, 0.045, 0.06, 0.012, 0, 0.03, 0.17));
+      g.add(strip(m, 0.012, 0.06, 0.34, 0.02, 0.03, 0));
+      return g;
+    },
+  },
+  {
+    id: 'phoneMount', mode: 'int', cat: 'console', name: '폰 거치대', price: 22000,
+    fit: ALL, variants: [{ id: 'L', label: '좌측 장착', sw: SW.black }, { id: 'R', label: '우측 장착', sw: SW.black }], def: 'L',
     focus: { pos: [-0.1, 0.95, 0.1], tgt: [-0.28, 0.82, -0.8] },
     build(v) {
       const x = v === 'L' ? -0.3 : 0.3;
@@ -568,14 +777,14 @@ const PRODUCTS = [
       return g;
     },
   },
+  /* ----- 매트·보호 ----- */
   {
-    id: 'frontMats', cat: 'mat', name: '1열 매트 세트', price: 49000,
-    variants: [{ id: 'black', label: '블랙', sw: SW.black }, { id: 'beige', label: '베이지', sw: SW.beige }],
-    def: 'black',
+    id: 'frontMats', mode: 'int', cat: 'protect', name: 'TPE 올웨더 매트 1열', price: 49000, popular: true,
+    fit: ALL, variants: matV, def: 'black',
     focus: { pos: [0, 1.15, 0.55], tgt: [0, 0.05, -0.45] },
     build(v) {
       const g = new THREE.Group();
-      const m = new THREE.MeshStandardMaterial({ map: v === 'beige' ? ribBeige : ribBlack, roughness: 0.95 });
+      const m = ribMat(v);
       for (const x of [-0.38, 0.38]) {
         const mesh = new THREE.Mesh(new RoundedBoxGeometry(0.42, 0.008, 0.55, 2, 0.003), m);
         mesh.position.set(x, 0.012, -0.42); mesh.castShadow = true; mesh.receiveShadow = true;
@@ -583,42 +792,205 @@ const PRODUCTS = [
       }
       return g;
     },
+    thumbBuild() {
+      const m = new THREE.Mesh(new RoundedBoxGeometry(0.42, 0.008, 0.55, 2, 0.003), ribMat('black'));
+      return m;
+    },
   },
   {
-    id: 'rearMat', cat: 'mat', name: '2열 매트', price: 35000,
-    variants: [{ id: 'black', label: '블랙', sw: SW.black }, { id: 'beige', label: '베이지', sw: SW.beige }],
-    def: 'black',
+    id: 'rearMat', mode: 'int', cat: 'protect', name: 'TPE 올웨더 매트 2열', price: 35000,
+    fit: ALL, variants: matV, def: 'black',
     focus: { pos: [0.4, 1.2, 0.2], tgt: [0, 0.1, 0.95] },
     build(v) {
       const g = new THREE.Group();
-      const m = new THREE.MeshStandardMaterial({ map: v === 'beige' ? ribBeige : ribBlack, roughness: 0.95 });
-      const mesh = new THREE.Mesh(new RoundedBoxGeometry(1.3, 0.008, 0.48, 2, 0.003), m);
+      const mesh = new THREE.Mesh(new RoundedBoxGeometry(1.3, 0.008, 0.48, 2, 0.003), ribMat(v));
       mesh.position.set(0, 0.012, 0.95); mesh.castShadow = true; mesh.receiveShadow = true;
-      g.add(mesh);
+      g.add(mesh); return g;
+    },
+  },
+  {
+    id: 'kickMat', mode: 'int', cat: 'protect', name: '시트백 킥매트 2P', price: 16000,
+    fit: ALL, variants: [{ id: 'black', label: '블랙', sw: SW.black }, { id: 'carbon', label: '카본', sw: SW.carbon }], def: 'black',
+    focus: { pos: [0, 1.0, 1.6], tgt: [0, 0.75, 0.6] },
+    build(v) {
+      const g = new THREE.Group();
+      for (const x of [-0.38, 0.38]) {
+        const p = strip(MAT[v](), 0.4, 0.45, 0.008, x, 0.72, 0.625, 0.17);
+        g.add(p);
+      }
       return g;
+    },
+    thumbBuild() { return strip(MAT.black(), 0.4, 0.45, 0.01, 0, 0, 0); },
+  },
+  {
+    id: 'doorSill', mode: 'int', cat: 'protect', name: '도어씰 프로텍터 4P', price: 19000,
+    fit: ALL, variants: [{ id: 'carbon', label: '카본', sw: SW.carbon }, { id: 'black', label: '블랙', sw: SW.black }], def: 'carbon',
+    focus: { pos: [0.3, 0.9, 0.6], tgt: [-0.72, 0.05, -0.2] },
+    build(v) {
+      const g = new THREE.Group();
+      const m = MAT[v]();
+      for (const x of [-0.72, 0.72]) for (const z of [-0.2, 0.9]) {
+        g.add(strip(m, 0.1, 0.008, 0.5, x, 0.006, z));
+      }
+      return g;
+    },
+    thumbBuild() { return strip(MAT.carbon(), 0.1, 0.01, 0.5, 0, 0, 0); },
+  },
+  /* ----- 필름·차양 ----- */
+  {
+    id: 'screenFilm', mode: 'int', cat: 'film', name: '센터 디스플레이 매트필름', price: 15000, popular: true,
+    fit: ALL, variants: [{ id: 'matte', label: '매트', sw: '#3c424b' }, { id: 'lowRef', label: '저반사', sw: '#262c35' }], def: 'matte',
+    focus: { pos: [0.05, 0.9, -0.2], tgt: [0, 0.72, -0.72] },
+    build(v) {
+      const g = new THREE.Group();
+      const m = new THREE.MeshPhysicalMaterial({
+        color: 0x10151c, roughness: v === 'matte' ? 0.55 : 0.28, clearcoat: 0.4,
+      });
+      const f = new THREE.Mesh(new RoundedBoxGeometry(0.346, 0.2, 0.004, 2, 0.002), m);
+      f.position.set(0, 0.72, -0.711); f.rotation.x = -0.12;
+      g.add(f); return g;
+    },
+  },
+  {
+    id: 'rearScreenFilm', mode: 'int', cat: 'film', name: '후석 디스플레이 필름', price: 9000,
+    fit: ['juniper', 'highland'],
+    variants: [{ id: 'matte', label: '매트', sw: '#3c424b' }], def: 'matte',
+    focus: { pos: [0, 0.85, 1.3], tgt: [0, 0.5, 0.38] },
+    build() {
+      const g = new THREE.Group();
+      const f = new THREE.Mesh(new RoundedBoxGeometry(0.183, 0.106, 0.004, 2, 0.002),
+        new THREE.MeshPhysicalMaterial({ color: 0x10151c, roughness: 0.55, clearcoat: 0.4 }));
+      f.position.set(0, 0.5, 0.391); f.rotation.x = 0.12;
+      g.add(f); return g;
+    },
+  },
+  {
+    id: 'sunshade', mode: 'int', cat: 'film', name: '글라스루프 선쉐이드', price: 32000, popular: true,
+    fit: ['juniper', 'legacyY'],
+    variants: [{ id: 'black', label: '블랙 메쉬', sw: SW.black }, { id: 'silver', label: '실버 코팅', sw: SW.silver }], def: 'black',
+    focus: { pos: [0.3, 0.75, 0.9], tgt: [0, 1.38, 0.3] },
+    build(v) {
+      const g = new THREE.Group();
+      const m = new THREE.MeshStandardMaterial({
+        color: v === 'silver' ? 0xb9bdc2 : 0x202226, roughness: v === 'silver' ? 0.45 : 0.9,
+      });
+      const p = new THREE.Mesh(new RoundedBoxGeometry(1.42, 0.012, 2.3, 2, 0.005), m);
+      p.position.set(0, 1.385, 0.3);
+      g.add(p); return g;
+    },
+  },
+  /* ----- 외장 ----- */
+  {
+    id: 'spoiler', mode: 'ext', cat: 'ext', name: '리어 스포일러', price: 45000,
+    fit: ALL, variants: [{ id: 'carbon', label: '카본', sw: SW.carbon }, { id: 'black', label: '글로스 블랙', sw: SW.black }], def: 'carbon',
+    focus: { pos: [2.6, 2.0, 4.2], tgt: [0, 1.1, 2.0] },
+    build(v, car) {
+      const g = new THREE.Group();
+      const suv = car.type === 'suv';
+      const sp = strip(v === 'black'
+        ? new THREE.MeshPhysicalMaterial({ color: 0x0c0d10, roughness: 0.15, clearcoat: 1 })
+        : MAT.carbon(),
+        1.15, 0.018, 0.22, 0, suv ? 1.12 : 1.1, suv ? 2.26 : 2.3, suv ? -0.4 : -0.15);
+      g.add(sp); return g;
+    },
+  },
+  {
+    id: 'mudflap', mode: 'ext', cat: 'ext', name: '머드 플랩 4P', price: 21000, popular: true,
+    fit: ALL, variants: [{ id: 'black', label: '블랙', sw: SW.black }], def: 'black',
+    focus: { pos: [-3.2, 1.0, 2.8], tgt: [-0.8, 0.3, 1.6] },
+    build(v, car) {
+      const g = new THREE.Group();
+      const m = MAT.black();
+      for (const z of [-1.3, 1.6]) for (const x of [-1, 1]) {
+        const f = strip(m, 0.05, 0.2, 0.14, x * (car.width / 2 - 0.16), 0.17, z + 0.48);
+        g.add(f);
+      }
+      return g;
+    },
+    thumbBuild() { return strip(MAT.black(), 0.05, 0.2, 0.14, 0, 0, 0); },
+  },
+  {
+    id: 'handleCover', mode: 'ext', cat: 'ext', name: '도어 핸들 커버 4P', price: 13000,
+    fit: ALL, variants: [{ id: 'carbon', label: '카본', sw: SW.carbon }, { id: 'red', label: '레드', sw: SW.red }, { id: 'white', label: '화이트', sw: SW.white }], def: 'carbon',
+    focus: { pos: [-3.4, 1.3, 0.6], tgt: [-0.9, 0.95, 0.1] },
+    build(v, car) {
+      const g = new THREE.Group();
+      const m = MAT[v]();
+      for (const x of [-1, 1]) for (const z of [-0.35, 0.75]) {
+        g.add(strip(m, 0.018, 0.028, 0.24, x * (car.width / 2 - 0.17), 0.93, z));
+      }
+      return g;
+    },
+    thumbBuild() { return strip(MAT.carbon(), 0.03, 0.028, 0.24, 0, 0, 0); },
+  },
+  {
+    id: 'wheelCaps', mode: 'ext', cat: 'ext', name: '에어로 휠 캡 세트', price: 59000,
+    fit: ALL, variants: [{ id: 'black', label: '매트 블랙', sw: SW.black }, { id: 'silver', label: '실버', sw: SW.silver }], def: 'black',
+    focus: { pos: [-3.4, 1.0, -2.6], tgt: [-0.9, 0.31, -1.3] },
+    build(v, car) {
+      const g = new THREE.Group();
+      const m = v === 'silver' ? MAT.silver() : new THREE.MeshStandardMaterial({ color: 0x17181c, roughness: 0.6 });
+      for (const z of [-1.3, 1.6]) for (const x of [-1, 1]) {
+        const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.21, 0.21, 0.26, 24).rotateZ(Math.PI / 2), m);
+        cap.position.set(x * (car.width / 2 - 0.1), 0.31, z);
+        cap.castShadow = true;
+        g.add(cap);
+        for (let i = 0; i < 5; i++) {
+          const a = i / 5 * Math.PI * 2;
+          const spoke = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.05, 0.14),
+            v === 'silver' ? new THREE.MeshStandardMaterial({ color: 0x3a3e44 }) : MAT.silver());
+          spoke.position.set(x * (car.width / 2 - 0.1 + x * 0.001) + x * 0.132, 0.31 + Math.sin(a) * 0.12, z + Math.cos(a) * 0.12);
+          g.add(spoke);
+        }
+      }
+      return g;
+    },
+    thumbBuild() {
+      const m = new THREE.Mesh(new THREE.CylinderGeometry(0.21, 0.21, 0.08, 24), MAT.black());
+      m.rotation.x = Math.PI / 2; return m;
     },
   },
 ];
 const byId = Object.fromEntries(PRODUCTS.map((p) => [p.id, p]));
 
-/* ---------- 장착 상태 ---------- */
-const installed = new Map(); // id -> { root, variant }
+/* ---------- 앱 상태 ---------- */
+let car = null;
+let mode = 'ext'; // 'ext' | 'int'
+let theme = 'black';
+let paint = PAINTS[0].id;
+const installed = new Map(); // productId -> { root, variant }
 
+const STORE_KEY = 'carpoc.v3';
+let store = { carId: null, cars: {} };
+try { store = JSON.parse(localStorage.getItem(STORE_KEY)) || store; } catch { /* 무시 */ }
+function persist() {
+  if (!car) return;
+  store.carId = car.id;
+  store.cars[car.id] = {
+    theme, paint,
+    items: [...installed.entries()].map(([id, e]) => ({ id, v: e.variant })),
+  };
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(store)); } catch { /* 무시 */ }
+}
+
+/* ---------- 장착 ---------- */
 function install(p, variantId, fly = true) {
-  remove(p.id, false);
-  const root = p.build(variantId);
+  removeItem(p.id, false);
+  const root = p.build(variantId, car);
   root.userData = { productId: p.id };
+  root.visible = p.mode === mode || p.mode === 'int'; // 실내 상품은 외관에서도 유리 너머로 보임
+  if (p.mode === 'ext' && mode === 'int') root.visible = false;
   productsGroup.add(root);
   installed.set(p.id, { root, variant: variantId });
-  refreshCards(); refreshCart(); persist();
+  refreshCards(); refreshCartBadge(); persist();
   if (fly) flyTo(p.focus);
 }
-function remove(id, refresh = true) {
+function removeItem(id, refresh = true) {
   const e = installed.get(id);
   if (!e) return;
   productsGroup.remove(e.root);
   installed.delete(id);
-  if (refresh) { refreshCards(); refreshCart(); persist(); }
+  if (refresh) { refreshCards(); refreshCartBadge(); persist(); }
 }
 function totalPrice() {
   let t = 0;
@@ -626,7 +998,7 @@ function totalPrice() {
   return t;
 }
 
-/* ---------- 카메라 이동 ---------- */
+/* ---------- 카메라 ---------- */
 let flyAnim = null;
 function flyTo(f) {
   flyAnim = {
@@ -635,74 +1007,196 @@ function flyTo(f) {
     t0: orbit.target.clone(), t1: new THREE.Vector3(...f.tgt),
   };
 }
-const VIEWS = {
+const EXT_VIEWS = {
+  overview: { pos: [3.6, 1.8, 4.4], tgt: [0, 0.7, 0] },
+  front: { pos: [0, 1.2, -5.6], tgt: [0, 0.75, 0] },
+  rear: { pos: [0, 1.3, 5.8], tgt: [0, 0.8, 0.5] },
+  side: { pos: [-5.8, 1.2, 0.2], tgt: [0, 0.75, 0.2] },
+};
+const INT_VIEWS = {
   overview: { pos: [1.55, 1.45, 1.75], tgt: [0, 0.5, -0.1] },
   driver: { pos: [-0.38, 1.0, 0.45], tgt: [0.12, 0.62, -0.85] },
   passenger: { pos: [0.38, 1.0, 0.45], tgt: [-0.12, 0.62, -0.85] },
   rear: { pos: [0, 1.05, 1.75], tgt: [0, 0.55, -0.4] },
 };
-document.querySelectorAll('[data-view]').forEach((b) => b.addEventListener('click', () => {
-  document.querySelectorAll('[data-view]').forEach((x) => x.classList.toggle('on', x === b));
-  flyTo(VIEWS[b.dataset.view]);
+document.querySelectorAll('[data-eview]').forEach((b) => b.addEventListener('click', () => {
+  document.querySelectorAll('[data-eview]').forEach((x) => x.classList.toggle('on', x === b));
+  flyTo(EXT_VIEWS[b.dataset.eview]);
 }));
-camera.position.set(...VIEWS.overview.pos);
-orbit.target.set(...VIEWS.overview.tgt);
+document.querySelectorAll('[data-iview]').forEach((b) => b.addEventListener('click', () => {
+  document.querySelectorAll('[data-iview]').forEach((x) => x.classList.toggle('on', x === b));
+  flyTo(INT_VIEWS[b.dataset.iview]);
+}));
 
-/* ---------- 상품 썸네일 (절차 생성 모델을 미니 렌더) ---------- */
+/* ---------- 외관/내관 전환 ---------- */
+function setMode(m, fly = true) {
+  mode = m;
+  $('modeExt').classList.toggle('on', m === 'ext');
+  $('modeInt').classList.toggle('on', m === 'int');
+  $('extChips').hidden = m !== 'ext';
+  $('intChips').hidden = m !== 'int';
+  exteriorGroup.visible = m === 'ext';
+  for (const [id, e] of installed) {
+    const pm = byId[id].mode;
+    e.root.visible = pm === 'int' ? true : m === 'ext';
+    if (pm === 'int' && m === 'ext') e.root.visible = true;
+  }
+  if (m === 'ext') { orbit.minDistance = 2.2; orbit.maxDistance = 10; orbit.maxPolarAngle = Math.PI * 0.55; }
+  else { orbit.minDistance = 0.25; orbit.maxDistance = 6; orbit.maxPolarAngle = Math.PI * 0.92; }
+  closeOptions();
+  activeCat = 'all';
+  buildCats(); refreshCards();
+  if (fly) flyTo(m === 'ext' ? EXT_VIEWS.overview : INT_VIEWS.overview);
+}
+$('modeExt').addEventListener('click', () => setMode('ext'));
+$('modeInt').addEventListener('click', () => setMode('int'));
+
+/* ---------- 내장색 / 도장 ---------- */
+$('themeBtn').addEventListener('click', () => {
+  theme = theme === 'black' ? 'white' : 'black';
+  applyTheme(theme);
+  $('themeBtn').textContent = '내장: ' + (theme === 'black' ? '블랙' : '화이트');
+  persist();
+});
+$('paintBtn').addEventListener('click', () => {
+  showSheet({
+    title: '차량 색상', sub: '도장 컬러 (무료 시뮬레이션)',
+    variants: PAINTS.map((p) => ({ id: p.id, label: p.label, sw: p.id })),
+    current: paint, removable: false,
+    onPick: (id) => { paint = id; paintMat?.color.set(id); persist(); },
+  });
+});
+
+/* ---------- 썸네일 ---------- */
 const thumbs = {};
+const carThumbs = {};
 function makeThumbs() {
   const r = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
-  r.setSize(128, 128);
   r.toneMapping = THREE.ACESFilmicToneMapping;
   const sc = new THREE.Scene();
   sc.background = new THREE.Color(0x11151a);
   sc.environment = scene.environment;
   sc.add(new THREE.HemisphereLight(0xffffff, 0x445, 1.2));
   const d = new THREE.DirectionalLight(0xffffff, 2); d.position.set(2, 3, 2); sc.add(d);
-  const cam = new THREE.PerspectiveCamera(40, 1, 0.01, 10);
+  const shoot = (obj, cam, w, h) => {
+    r.setSize(w, h);
+    sc.add(obj); r.render(sc, cam); sc.remove(obj);
+    return r.domElement.toDataURL('image/png');
+  };
+  const cam = new THREE.PerspectiveCamera(40, 1, 0.01, 30);
+  const thumbCar = CARS[0];
   for (const p of PRODUCTS) {
-    const obj = p.build(p.def);
+    const obj = p.thumbBuild ? p.thumbBuild() : p.build(p.def, thumbCar);
     const box = new THREE.Box3().setFromObject(obj);
     const c = box.getCenter(new THREE.Vector3());
     const size = box.getSize(new THREE.Vector3()).length() || 0.3;
     obj.position.sub(c);
-    sc.add(obj);
     cam.position.set(size * 0.8, size * 0.7, size * 1.1);
     cam.lookAt(0, 0, 0);
-    r.render(sc, cam);
-    thumbs[p.id] = r.domElement.toDataURL('image/png');
-    sc.remove(obj);
+    cam.aspect = 1; cam.updateProjectionMatrix();
+    thumbs[p.id] = shoot(obj, cam, 128, 128);
+  }
+  const carCam = new THREE.PerspectiveCamera(35, 150 / 86, 0.01, 40);
+  for (const c of CARS) {
+    const obj = buildExterior(c, c.defPaint);
+    obj.position.y += 0.02;
+    carCam.position.set(4.6, 2.0, -4.8);
+    carCam.lookAt(0, 0.55, 0);
+    carCam.updateProjectionMatrix();
+    carThumbs[c.id] = shoot(obj, carCam, 300, 172);
+    disposeGroup(obj);
   }
   r.dispose();
 }
 makeThumbs();
+paintMat = null; wheelCapMats = []; // 썸네일 빌드의 잔여 참조 제거
 
-/* ---------- 드로어 UI ---------- */
-let activeCat = 'all';
-const catsEl = $('cats');
-for (const c of CATEGORIES) {
+/* ---------- 차량 선택 ---------- */
+const carList = $('carList');
+for (const c of CARS) {
   const b = document.createElement('button');
-  b.className = 'chip' + (c.id === 'all' ? ' on' : '');
-  b.textContent = c.label; b.id = 'cat_' + c.id;
-  b.addEventListener('click', () => {
-    activeCat = c.id;
-    catsEl.querySelectorAll('.chip').forEach((x) => x.classList.toggle('on', x === b));
-    refreshCards();
-  });
-  catsEl.appendChild(b);
+  b.className = 'carCard'; b.id = 'car_' + c.id;
+  const img = document.createElement('img');
+  img.src = carThumbs[c.id]; img.alt = c.label;
+  const cn = document.createElement('div'); cn.className = 'cn'; cn.textContent = c.label;
+  const cy = document.createElement('div'); cy.className = 'cy'; cy.textContent = c.sub;
+  b.append(img, cn, cy);
+  b.addEventListener('click', () => { selectCar(c.id); $('carSelect').hidden = true; });
+  carList.appendChild(b);
+}
+$('carChange').addEventListener('click', () => { $('carSelect').hidden = false; });
+
+function selectCar(id) {
+  car = carById[id];
+  const saved = store.cars[id] || {};
+  theme = saved.theme || 'black';
+  paint = saved.paint || car.defPaint;
+
+  // 장면 재구성
+  for (const pid of [...installed.keys()]) removeItem(pid, false);
+  disposeGroup(exteriorGroup);
+  disposeGroup(interiorGroup);
+  exteriorGroup.add(buildExterior(car, paint));
+  interiorGroup.add(buildInterior(car));
+  applyTheme(theme);
+  $('themeBtn').textContent = '내장: ' + (theme === 'black' ? '블랙' : '화이트');
+
+  for (const it of saved.items || []) {
+    const p = byId[it.id];
+    if (p && p.fit.includes(car.id)) {
+      install(p, p.variants.some((v) => v.id === it.v) ? it.v : p.def, false);
+    }
+  }
+  setMode('ext', false);
+  camera.position.set(...EXT_VIEWS.overview.pos);
+  orbit.target.set(...EXT_VIEWS.overview.tgt);
+  persist();
+  showHint(`${car.label} — 색상을 고르고 ‘내관’에서 용품을 장착해 보세요`, 4500);
+}
+
+/* ---------- 드로어 ---------- */
+let activeCat = 'all';
+function buildCats() {
+  const el = $('cats');
+  el.textContent = '';
+  if (mode === 'ext') { el.hidden = true; return; }
+  el.hidden = false;
+  for (const c of INT_CATEGORIES) {
+    const b = document.createElement('button');
+    b.className = 'chip' + (c.id === activeCat ? ' on' : '');
+    b.textContent = c.label; b.id = 'cat_' + c.id;
+    b.addEventListener('click', () => {
+      activeCat = c.id;
+      el.querySelectorAll('.chip').forEach((x) => x.classList.toggle('on', x === b));
+      refreshCards();
+    });
+    el.appendChild(b);
+  }
+}
+function visibleProducts() {
+  return PRODUCTS.filter((p) =>
+    p.mode === mode &&
+    p.fit.includes(car.id) &&
+    (mode === 'ext' || activeCat === 'all' || p.cat === activeCat)
+  );
 }
 function refreshCards() {
+  if (!car) return;
   const el = $('cards');
   el.textContent = '';
-  for (const p of PRODUCTS) {
-    if (activeCat !== 'all' && p.cat !== activeCat) continue;
+  for (const p of visibleProducts()) {
     const inst = installed.get(p.id);
     const b = document.createElement('button');
     b.className = 'card' + (inst ? ' installed' : '');
     b.id = 'card_' + p.id;
     const img = document.createElement('img');
     img.src = thumbs[p.id]; img.alt = p.name;
-    const nm = document.createElement('div'); nm.className = 'nm'; nm.textContent = p.name;
+    const nm = document.createElement('div'); nm.className = 'nm';
+    if (p.popular) {
+      const t = document.createElement('span'); t.className = 'pop-tag'; t.textContent = '인기';
+      nm.appendChild(t);
+    }
+    nm.appendChild(document.createTextNode(p.name));
     const pr = document.createElement('div'); pr.className = 'pr'; pr.textContent = won(p.price);
     b.append(img, nm, pr);
     if (inst) {
@@ -715,30 +1209,40 @@ function refreshCards() {
     });
     el.appendChild(b);
   }
+  $('drawerTitle').textContent = mode === 'ext'
+    ? '외장 용품 — 선택하면 바로 장착됩니다'
+    : `${car.label} 호환 상품만 표시됩니다`;
   const n = installed.size;
   $('drawerMeta').textContent = n ? `장착 ${n} · ${won(totalPrice())}` : '';
+}
+function refreshCartBadge() {
+  const n = installed.size;
   $('cartCount').hidden = n === 0;
   $('cartCount').textContent = n;
+  const m = $('drawerMeta');
+  m.textContent = n ? `장착 ${n} · ${won(totalPrice())}` : '';
 }
 
-/* ---------- 옵션 시트 ---------- */
-let optProduct = null;
-function openOptions(p) {
-  optProduct = p;
-  $('optName').textContent = p.name;
-  $('optPrice').textContent = won(p.price) + ' · 예시';
+/* ---------- 옵션 시트 (상품/도장 공용) ---------- */
+let sheetCfg = null;
+function showSheet(cfg) {
+  sheetCfg = cfg;
+  $('optName').textContent = cfg.title;
+  $('optPrice').textContent = cfg.sub || '';
+  $('optFit').textContent = cfg.fitText || '';
+  $('optRemove').hidden = cfg.removable === false;
   const sw = $('optSw');
   sw.textContent = '';
-  const cur = installed.get(p.id)?.variant ?? p.def;
-  for (const v of p.variants) {
+  for (const v of cfg.variants) {
     const b = document.createElement('button');
-    b.className = 'sw' + (v.id === cur ? ' on' : '');
+    b.className = 'sw' + (v.id === cfg.current ? ' on' : '');
     const dot = document.createElement('span'); dot.className = 'dot';
     dot.style.background = v.sw;
     const lb = document.createElement('span'); lb.textContent = v.label;
     b.append(dot, lb);
     b.addEventListener('click', () => {
-      install(p, v.id, false);
+      cfg.current = v.id;
+      cfg.onPick(v.id);
       sw.querySelectorAll('.sw').forEach((x) => x.classList.toggle('on', x === b));
     });
     sw.appendChild(b);
@@ -746,18 +1250,31 @@ function openOptions(p) {
   $('main').hidden = true;
   $('optSheet').hidden = false;
 }
+let optProduct = null;
+function openOptions(p) {
+  optProduct = p;
+  showSheet({
+    title: p.name,
+    sub: won(p.price) + ' · 예시',
+    fitText: '호환: ' + p.fit.map((f) => FIT_LABEL[f]).join(' · '),
+    variants: p.variants,
+    current: installed.get(p.id)?.variant ?? p.def,
+    removable: true,
+    onPick: (id) => install(p, id, false),
+  });
+}
 function closeOptions() {
-  optProduct = null;
+  optProduct = null; sheetCfg = null;
   $('optSheet').hidden = true;
   $('main').hidden = false;
 }
 $('optDone').addEventListener('click', closeOptions);
 $('optRemove').addEventListener('click', () => {
-  if (optProduct) remove(optProduct.id);
+  if (optProduct) removeItem(optProduct.id);
   closeOptions();
 });
 
-/* ---------- 3D에서 상품 탭 → 옵션 ---------- */
+/* ---------- 3D 탭 → 상품 옵션 ---------- */
 const raycaster = new THREE.Raycaster();
 let downPos = null, downTime = 0;
 renderer.domElement.addEventListener('pointerdown', (e) => {
@@ -775,10 +1292,14 @@ renderer.domElement.addEventListener('pointerup', (e) => {
     -((e.clientY - rect.top) / rect.height) * 2 + 1
   ), camera);
   const hits = raycaster.intersectObjects(productsGroup.children, true);
-  if (hits.length) {
-    let o = hits[0].object;
+  for (const h of hits) {
+    let o = h.object;
     while (o && !o.userData?.productId) o = o.parent;
-    if (o) { const p = byId[o.userData.productId]; flyTo(p.focus); openOptions(p); }
+    if (o && o.visible) {
+      const p = byId[o.userData.productId];
+      flyTo(p.focus); openOptions(p);
+      return;
+    }
   }
 });
 
@@ -786,10 +1307,23 @@ renderer.domElement.addEventListener('pointerup', (e) => {
 $('cartBtn').addEventListener('click', () => { refreshCart(); $('cartModal').hidden = false; });
 $('cartClose').addEventListener('click', () => { $('cartModal').hidden = true; });
 $('clearAll').addEventListener('click', () => {
-  for (const id of [...installed.keys()]) remove(id, false);
-  refreshCards(); refreshCart(); persist();
+  for (const id of [...installed.keys()]) removeItem(id, false);
+  refreshCards(); refreshCartBadge(); refreshCart(); persist();
+});
+$('copyList').addEventListener('click', async () => {
+  const lines = [`[${car.label}] 장착 조합`];
+  for (const [id, e] of installed) {
+    const p = byId[id];
+    const v = p.variants.find((x) => x.id === e.variant)?.label ?? '';
+    lines.push(`· ${p.name}${v ? ` (${v})` : ''} — ${won(p.price)}`);
+  }
+  lines.push(`합계 (예시): ${won(totalPrice())}`);
+  const text = lines.join('\n');
+  try { await navigator.clipboard.writeText(text); showHint('조합 목록을 복사했습니다', 2000); }
+  catch { showHint('복사할 수 없는 환경입니다', 2500); }
 });
 function refreshCart() {
+  $('cartTitle').textContent = car ? `장착한 상품 — ${car.label}` : '장착한 상품';
   const el = $('cartRows');
   el.textContent = '';
   if (!installed.size) {
@@ -810,7 +1344,7 @@ function refreshCart() {
     const rp = document.createElement('div'); rp.className = 'rp'; rp.textContent = won(p.price);
     const rx = document.createElement('button'); rx.className = 'rx'; rx.textContent = '✕';
     rx.setAttribute('aria-label', p.name + ' 제거');
-    rx.addEventListener('click', () => { remove(id); refreshCart(); });
+    rx.addEventListener('click', () => { removeItem(id); refreshCart(); });
     row.append(img, ri, rp, rx);
     el.appendChild(row);
   }
@@ -825,28 +1359,6 @@ $('shotBtn').addEventListener('click', () => {
 });
 $('shotClose').addEventListener('click', () => { $('shotModal').hidden = true; });
 
-/* ---------- 저장 (이 브라우저에 자동 저장) ---------- */
-function persist() {
-  try {
-    localStorage.setItem('carpoc.v2', JSON.stringify({
-      theme, items: [...installed.entries()].map(([id, e]) => ({ id, v: e.variant })),
-    }));
-  } catch { /* 사용 불가 환경 무시 */ }
-}
-function restore() {
-  try {
-    const d = JSON.parse(localStorage.getItem('carpoc.v2'));
-    if (!d) return;
-    if (d.theme === 'white') { theme = 'white'; applyTheme('white'); $('themeBtn').textContent = '내장: 화이트'; }
-    for (const it of d.items || []) {
-      const p = byId[it.id];
-      if (p) install(p, p.variants.some((v) => v.id === it.v) ? it.v : p.def, false);
-    }
-  } catch { /* 저장 데이터 없음/손상 무시 */ }
-}
-restore();
-refreshCards();
-
 /* ---------- 힌트 ---------- */
 let hintTimer = 0;
 function showHint(text, ms) {
@@ -855,7 +1367,13 @@ function showHint(text, ms) {
   clearTimeout(hintTimer);
   if (ms) hintTimer = setTimeout(() => { h.hidden = true; }, ms);
 }
-if (!installed.size) showHint('아래에서 상품을 고르면 바로 장착됩니다', 5000);
+
+/* ---------- 시작 ---------- */
+if (store.carId && carById[store.carId]) {
+  selectCar(store.carId);
+} else {
+  $('carSelect').hidden = false;
+}
 
 /* ---------- 루프 / 리사이즈 / FPS ---------- */
 function resize() {
@@ -872,7 +1390,7 @@ function loop() {
   requestAnimationFrame(loop);
   if (flyAnim) {
     flyAnim.t = Math.min(1, flyAnim.t + 1 / 40);
-    const k = 1 - Math.pow(1 - flyAnim.t, 3); // easeOutCubic
+    const k = 1 - Math.pow(1 - flyAnim.t, 3);
     camera.position.lerpVectors(flyAnim.p0, flyAnim.p1, k);
     orbit.target.lerpVectors(flyAnim.t0, flyAnim.t1, k);
     if (flyAnim.t >= 1) flyAnim = null;
