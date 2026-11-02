@@ -178,6 +178,21 @@
   #shotModal p { color: var(--fg-dim); font-size: 12px; margin: 0; }
   .empty { color: var(--fg-dim); font-size: 13px; text-align: center; padding-block: 18px; }
 
+  /* ---- 로딩 오버레이 ---- */
+  #loadOv {
+    position: fixed; inset: 0; z-index: 25; background: rgba(10,12,16,.82);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+    backdrop-filter: blur(3px);
+  }
+  #loadOv .spin {
+    width: 44px; height: 44px; border-radius: 50%;
+    border: 3px solid var(--line); border-top-color: var(--accent);
+    animation: sp 0.9s linear infinite;
+  }
+  @keyframes sp { to { transform: rotate(360deg); } }
+  #loadMsg { color: var(--fg-dim); font-size: 13px; margin: 0; }
+  @media (prefers-reduced-motion: reduce) { #loadOv .spin { animation: none; } }
+
   /* ---- 차량 선택 ---- */
   #carSelect {
     position: fixed; inset: 0; z-index: 30; background: var(--bg);
@@ -278,6 +293,11 @@
     <img id="shotImg" alt="장면 스크린샷">
     <p>이미지를 길게 눌러(또는 우클릭) 저장하세요.</p>
     <button class="chip" id="shotClose">닫기</button>
+  </div>
+
+  <div id="loadOv" hidden>
+    <div class="spin"></div>
+    <p id="loadMsg">실차 3D 모델 불러오는 중…</p>
   </div>
 
   <div id="carSelect" hidden>
@@ -773,9 +793,9 @@ const CARS = [
         views: { overview: { pos: [0, 1.3, 1.12], tgt: [0, 0.6, -0.55], fov: 72 }, dash: { pos: [0, 1.1, 0.34], tgt: [0, 0.73, -0.27], fov: 58 }, console: { pos: [0.35, 1.18, 0.75], tgt: [-0.02, 0.7, 0.25], fov: 56 }, door: { pos: [0.12, 1.38, -0.05], tgt: [-0.88, 0.5, -0.18], fov: 60 }, floor: { pos: [-0.05, 1.32, 0.35], tgt: [-0.36, 0.6, -0.32], fov: 64 }, rear: { pos: [0, 1.25, 0.1], tgt: [0, 0.62, 1.15], fov: 68 }, roof: { pos: [0.1, 0.9, 0.55], tgt: [0, 1.52, 0.4], fov: 72 } } } } },
   { id: 'highland', label: '모델 3 하이랜드', sub: '2024~ · 세단', type: 'sedan', width: 1.78, rearDisplay: true, defPaint: '#8e1626',
     asset: { url: 'assets/highland/model.glb.wasm', len: 4.72, rotY: Math.PI, paintRe: /^$/,
-      cabin: { floorY: 0.368, dashTopY: 0.78, dashFrontZ: -1.077, consoleTopY: 0.606, doorX: 0.835, roofY: 1.19,
-        rearScreen: [0, 0.47, 0.9],
-        views: { overview: { pos: [0, 0.98, 0.8], tgt: [0, 0.52, -0.95], fov: 72 }, dash: { pos: [0.05, 0.8, -0.1], tgt: [0, 0.6, -1.05], fov: 60 }, console: { pos: [0.28, 0.95, 0.55], tgt: [-0.05, 0.55, -0.1], fov: 58 }, door: { pos: [0.15, 1.0, -0.35], tgt: [-0.85, 0.42, -0.5], fov: 62 }, floor: { pos: [0, 1.02, 0.1], tgt: [-0.33, 0.37, -0.75], fov: 64 }, rear: { pos: [0, 1.0, 0.4], tgt: [0, 0.5, 1.55], fov: 68 }, roof: { pos: [0.1, 0.7, 0.5], tgt: [0, 1.17, 0.15], fov: 72 } } } } },
+      cabin: { floorY: 0.368, dashTopY: 0.72, dashFrontZ: -0.92, consoleTopY: 0.606, doorX: 0.905, roofY: 1.19,
+        rearScreen: [0, 0.5, -0.95],
+        views: { overview: { pos: [0, 0.98, -0.75], tgt: [0, 0.5, 1.0], fov: 72 }, dash: { pos: [0, 0.82, -0.35], tgt: [0, 0.52, 0.75], fov: 58 }, console: { pos: [0.28, 0.95, -0.5], tgt: [-0.05, 0.55, 0.15], fov: 58 }, door: { pos: [0.1, 0.9, 0.55], tgt: [-0.9, 0.5, 0.25], fov: 62 }, floor: { pos: [0.12, 0.95, -0.1], tgt: [-0.45, 0.37, 0.45], fov: 62 }, rear: { pos: [0, 0.95, -0.4], tgt: [0, 0.55, -1.7], fov: 68 }, roof: { pos: [0.1, 0.72, -0.2], tgt: [0, 1.17, 0.1], fov: 72 } } } } },
 ];
 const carById = Object.fromEntries(CARS.map((c) => [c.id, c]));
 const FIT_LABEL = { juniper: '모델 Y 주니퍼', legacyY: '모델 Y 레거시', highland: '모델 3 하이랜드' };
@@ -1373,7 +1393,7 @@ const INT_CATEGORIES = [
 const PRODUCTS = [
   {
     id: 'dashTrim', mode: 'int', intView: 'dash', cat: 'trim', name: '대시보드 트림', price: 39000,
-    fit: ALL, variants: trimV, def: 'carbon',
+    fit: ['juniper', 'legacyY'], variants: trimV, def: 'carbon',
     focus: { pos: [0, 1.0, 0.15], tgt: [0, 0.74, -0.85] },
     build(v) { const g = new THREE.Group(); g.add(strip(MAT[v](), 1.3, 0.05, 0.016, 0, 0.77, -0.63, -0.1)); return g; },
   },
@@ -1401,7 +1421,7 @@ const PRODUCTS = [
   },
   {
     id: 'ambient', mode: 'int', intView: 'dash', cat: 'light', name: '엠비언트 확장 키트', price: 25000,
-    fit: ALL, split: true, variants: lightV, def: '#7fd4ff',
+    fit: ['juniper', 'legacyY'], split: true, variants: lightV, def: '#7fd4ff',
     focus: { pos: [0, 0.9, 0.35], tgt: [0, 0.66, -0.75] },
     build(v) {
       const g = new THREE.Group();
@@ -1490,7 +1510,7 @@ const PRODUCTS = [
   },
   {
     id: 'phoneMount', mode: 'int', intView: 'dash', cat: 'console', name: '폰 거치대', price: 22000,
-    fit: ALL, variants: [{ id: 'L', label: '좌측 장착', sw: SW.black }, { id: 'R', label: '우측 장착', sw: SW.black }], def: 'L',
+    fit: ['juniper', 'legacyY'], variants: [{ id: 'L', label: '좌측 장착', sw: SW.black }, { id: 'R', label: '우측 장착', sw: SW.black }], def: 'L',
     focus: { pos: [-0.1, 0.95, 0.1], tgt: [-0.28, 0.84, -0.75] },
     build(v) {
       const x = v === 'L' ? -0.3 : 0.3;
@@ -1560,7 +1580,7 @@ const PRODUCTS = [
   },
   {
     id: 'screenFilm', mode: 'int', intView: 'dash', cat: 'film', name: '센터 디스플레이 매트필름', price: 15000, popular: true,
-    fit: ALL, variants: [{ id: 'matte', label: '매트', sw: '#3c424b' }, { id: 'lowRef', label: '저반사', sw: '#262c35' }], def: 'matte',
+    fit: ['juniper', 'legacyY'], variants: [{ id: 'matte', label: '매트', sw: '#3c424b' }, { id: 'lowRef', label: '저반사', sw: '#262c35' }], def: 'matte',
     focus: { pos: [0.05, 0.95, -0.15], tgt: [0, 0.82, -0.66] },
     build(v) {
       const g = new THREE.Group();
@@ -1966,6 +1986,12 @@ for (const c of CARS) {
   const img = document.createElement('img');
   img.src = carThumbs[c.id]; img.alt = c.label;
   const cn = document.createElement('div'); cn.className = 'cn'; cn.textContent = c.label;
+  if (c.id === 'highland') {
+    const bd = document.createElement('span');
+    bd.textContent = '실사급';
+    bd.style.cssText = 'margin-left:6px;background:var(--accent);color:var(--accent-ink);font-size:10px;font-weight:700;border-radius:6px;padding:2px 6px;vertical-align:2px';
+    cn.appendChild(bd);
+  }
   const cy = document.createElement('div'); cy.className = 'cy'; cy.textContent = c.sub;
   b.append(img, cn, cy);
   b.addEventListener('click', () => { selectCar(c.id); $('carSelect').hidden = true; });
@@ -1988,9 +2014,11 @@ async function selectCar(id) {
 
   // 외관: 실차 GLB(CC 라이선스) 우선, 실패 시 절차 생성 폴백
   if (car.asset && !car._prep) {
-    showHint('차량 3D 모델 불러오는 중…');
+    $('loadOv').hidden = false;
     const model = await loadCarAsset(car);
     if (model && !car._prep) car._prep = prepareCarModel(model, car);
+    $('loadOv').hidden = true;
+    if (!model) showHint('실차 모델을 불러오지 못해 간이 모델로 표시합니다', 4000);
   }
   exteriorGroup.clear();
   cabinExtrasGroup.clear();
